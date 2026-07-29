@@ -992,7 +992,7 @@ function openUpdate(tid){
     </div>`;
   document.getElementById("modalBg").classList.add("on");
 }
-function approvalsPaused(){ return DB.config.approvalsPaused===true; }
+function approvalsPaused(){ return false; }  /* approvals removed — edits apply directly */
 function submitUpdate(tid){
   if(approvalsPaused()){toast("Approvals are paused by HR — try again later");return;}
   const t=DB.targets.find(x=>x.id===tid);
@@ -1045,7 +1045,7 @@ function laBandChanged(band){
 }
 function laForm(id){
   const lp=DB.learningPlans[ACTOR];
-  const a = id ? lp.actions.find(x=>x.id===id) : {id:"",title:"",band:"70",timeline:{start:"",end:""},status:"Draft",update:""};
+  const a = id ? lp.actions.find(x=>x.id===id) : {id:"",title:"",band:"70",timeline:{start:"",end:""},status:"Approved",update:""};
   const opts=Object.entries(BANDS).map(([k,b])=>`<option value="${k}" ${a.band===k?"selected":""}>${b.label}</option>`).join("");
   const STATUS_OPTS=["Not started","Ongoing","Achieved","Not relevant"];
   const stOpts=`<option value="" ${!a.update?"selected":""} disabled>Select status…</option>`+
@@ -1112,12 +1112,11 @@ function saveLA(id){
         toast("Saved — approvals are paused, so this wasn't sent for review");
         return;
       }
-      // approval-relevant edit -> re-route for approval (status alone does NOT)
-      a.status = editorIsMentor ? "Approved" : "Pending";
-      laLog(ACTOR, ACTOR, editorIsMentor?"edited+approved":"edited", id, `Updated action; band ${band}; ${start||"?"}→${end||"?"}`);
+      a.status = "Approved";   // direct change, no review step
+      laLog(ACTOR, ACTOR, "edited", id, `Updated action; band ${band}; ${start||"?"}→${end||"?"}`);
     }
     closeModal();render();buildNav();
-    toast(changed ? (editorIsMentor?"Saved & approved":"Saved — sent to mentor for approval") : (statusChanged?"Status updated & logged":"No changes"));
+    toast(changed ? "Saved" : (statusChanged?"Status updated & logged":"No changes"));
   }else{
     if(approvalsPaused() && !editorIsMentor){
       lp.actions.push({id:"LA-"+(lp.actions.length+1+Math.floor(Math.random()*90)),title,band,timeline:{start,end},update:statusUpd,comment,status:"Draft"});
@@ -1127,12 +1126,12 @@ function saveLA(id){
       return;
     }
     const newId="LA-"+(lp.actions.length+1+Math.floor(Math.random()*90));
-    lp.actions.push({id:newId,title,band,timeline:{start,end},update:statusUpd,comment,status:editorIsMentor?"Approved":"Pending"});
+    lp.actions.push({id:newId,title,band,timeline:{start,end},update:statusUpd,comment,status:"Approved"});
     laLog(ACTOR, ACTOR, "created", newId, `Added action; band ${band}`);
     if(statusUpd) laLog(ACTOR, ACTOR, "status update", newId, `Status: "${statusUpd}"`);
     if(comment) laLog(ACTOR, ACTOR, "comment", newId, `Comment: "${comment}"`);
     closeModal();render();buildNav();
-    toast(editorIsMentor?"Saved & approved":"Saved — sent to mentor for approval");
+    toast("Saved");
   }
 }
 function approveLA(eid,id,ok){
@@ -1866,7 +1865,7 @@ async function loadFromExcel(manual){
           _rowId: c.CareerID,
           _setBy: c.ReadinessSetBy || "",
           _review: c.ReadinessReviewDate || "",
-          _approval: c.ApprovalStatus || "Pending" 
+          _approval: c.ApprovalStatus || "Approved" 
         }]};
       });
     }
@@ -1883,7 +1882,7 @@ async function loadFromExcel(manual){
       lp.actions.push({
         id:a.ActionID, title:a.ActionTitle, band:String(a.Band),
         timeline:{start:a.StartDate||"", end:a.EndDate||""},
-        status:a.ApprovalStatus||"Draft", update:a.StatusUpdate||"",
+        status:a.ApprovalStatus||"Approved", update:a.StatusUpdate||"",
         comment:a.LatestComment||"",
         _visMentee: truthy(a.VisibleToMentee) ? "TRUE" : "FALSE",
         _visLead:   truthy(a.VisibleToLeadership) ? "TRUE" : "FALSE",
@@ -2006,7 +2005,7 @@ function actionRow(a, eid, mentorId){
   return {
     ActionID:a.id, EmployeeID:eid, Band:String(a.band), ActionTitle:a.title,
     StartDate:(a.timeline&&a.timeline.start)||"", EndDate:(a.timeline&&a.timeline.end)||"",
-    ApprovalStatus:a.status||"Draft", StatusUpdate:a.update||"", LatestComment:a.comment||"",
+    ApprovalStatus:a.status||"Approved", StatusUpdate:a.update||"", LatestComment:a.comment||"",
     VisibleToMentee:a._visMentee||"TRUE", VisibleToLeadership:a._visLead||"TRUE",
     MentorID:mentorId||"",
     CreatedBy:a._createdBy||(CURRENT_EMP||ACTOR), CreatedOn:a._createdOn||today(),
@@ -2078,7 +2077,7 @@ function careerRow(){
     MilestoneType: c.next===c.ladder[c.atIdx+2] ? "Skip level" : "Immediate next",
     Readiness:c.readiness||"", ReadinessSetBy:c._setBy||"",
     ReadinessReviewDate:c._review||"", PathSelected:"TRUE",
-    ApprovalStatus:c._approval||"Pending",
+    ApprovalStatus:c._approval||"Approved",
     LastUpdatedBy:CURRENT_EMP||ACTOR, LastUpdatedOn:today()
   };
 }
