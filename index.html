@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- Live build: syncs with TalentPortal_Data.xlsx + TalentPortal_Permissions.xlsx
      through ONE Power Automate flow. Paste FLOW_URL near the bottom of this file. -->
-<title>Talent Studio — Prototype</title>
+<title>Talent Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.2.0/tabler-icons.min.css">
@@ -261,18 +261,12 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
   <div class="loginbox">
     <div class="lb-brand"><span class="dot"></span>Talent Studio</div>
     <div class="lb-sub">Sign in to your workspace</div>
-    <label class="lb-lab">Work email</label>
-    <input type="text" id="loginEmail" class="lb-input" placeholder="you@altudo.co" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
-    <input type="password" id="loginPass" class="lb-input" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="margin-top:8px">
+    <label class="lb-lab">Employee ID</label>
+    <input type="text" id="loginEmail" class="lb-input" placeholder="E-5102" autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="lb-btn" onclick="doLogin()">Sign in</button>
     <div class="lb-err" id="loginErr"></div>
     <div class="lb-demo">
-      <div class="lb-demo-lab">Demo accounts — click to fill</div>
-      <button class="lb-chip" onclick="fill('employee@altudo.co')"><span class="ti ti-user"></span>employee@altudo.co</button>
-      <button class="lb-chip" onclick="fill('mentor@altudo.co')"><span class="ti ti-users"></span>mentor@altudo.co</button>
-      <button class="lb-chip" onclick="fill('leadership@altudo.co')"><span class="ti ti-chart-dots"></span>leadership@altudo.co</button>
-      <button class="lb-chip" onclick="fill('admin@altudo.co')"><span class="ti ti-settings"></span>admin@altudo.co</button>
-      <div class="lb-note">Any password works in this prototype.</div>
+      <div class="lb-note" id="dirNote">Loading the employee directory\u2026</div>
     </div>
   </div>
 </div>
@@ -281,7 +275,6 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
   <aside class="side">
     <div class="brand">
       <div class="mk"><span class="dot"></span>Talent Studio</div>
-      <div class="sb">Prototype · sample data</div>
     </div>
 
     <div class="rolepick" id="rolePick" style="display:none">
@@ -304,7 +297,6 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
     <div class="sfoot">
       <div id="acctLine" style="margin-bottom:8px"></div>
       <button class="signout" onclick="signOut()"><span class="ti ti-logout" style="font-size:14px"></span>Sign out</button>
-      <div style="margin-top:8px">Access &amp; multi-user state are simulated in-memory.</div>
     </div>
   </aside>
 
@@ -1722,7 +1714,7 @@ function availableRoles(empId){
 }
 const ROLE_LABEL={employee:"Mentee",mentor:"Mentor",leader:"Leadership",hr:"HR admin"};
 
-function fill(email){document.getElementById("loginEmail").value=email;document.getElementById("loginPass").value="demo";document.getElementById("loginErr").textContent="";}
+function fill(id){document.getElementById("loginEmail").value=id;document.getElementById("loginErr").textContent="";}
 function doLogin(){
   const email=(document.getElementById("loginEmail").value||"").trim().toLowerCase();
   const acct=ACCOUNTS[email];
@@ -1768,7 +1760,6 @@ function signOut(){
   document.getElementById("appShell").style.display="none";
   document.getElementById("loginScreen").style.display="flex";
   document.getElementById("loginEmail").value="";
-  document.getElementById("loginPass").value="";
   document.getElementById("loginErr").textContent="";
 }
 
@@ -1796,14 +1787,19 @@ let   SYNC_STATE = "off";   // off | loading | live | error
 function callFlow(payload){
   return fetch(FLOW_URL, {
     method: "POST",
-    headers: { "Content-Type": "text/plain" },   // keeps it a CORS-simple request
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(Object.assign({
       actor: (typeof CURRENT_EMP !== "undefined" && CURRENT_EMP) ? CURRENT_EMP : ACTOR,
       source: "Dashboard"
     }, payload))
-  }).then(r=>{
-    if(!r.ok) throw new Error("HTTP " + r.status);
-    return r.json();
+  }).then(async r=>{
+    const txt = await r.text();
+    if(!r.ok){
+      console.error("[sync] flow returned " + r.status + ":", txt);
+      throw new Error("HTTP " + r.status + " " + txt.slice(0, 300));
+    }
+    if(!txt) throw new Error("Flow returned an empty body - is the Response action missing?");
+    return JSON.parse(txt);
   });
 }
 
@@ -2113,14 +2109,72 @@ selectPath = function(i){
     {changeType:"Updated", field:"PathName", newValue:c.name});
 };
 
-/* pull fresh data the moment someone signs in ------------------------------- */
-const _doLogin = doLogin;
+/* ============================================================================
+   SIGN IN — employee ID, access taken from PortalRole on the Employees sheet
+   ========================================================================== */
+const ROLE_FROM_SHEET = { "HR Admin":"hr", "Leadership":"leader", "Mentor":"mentor", "Employee":"employee" };
+let DIRECTORY_READY = false;
+
+function dirNote(txt){
+  const el = document.getElementById("dirNote");
+  if(el) el.textContent = txt;
+}
+
+/* "5102", "e5102", " E-5102 " all resolve to E-5102 */
+function normaliseId(raw){
+  const s = String(raw||"").trim().toUpperCase().replace(/\s+/g, "");
+  if(!s) return "";
+  return /^E-/.test(s) ? s : "E-" + s.replace(/^E/, "");
+}
+
 doLogin = function(){
-  _doLogin();
-  if(CURRENT_EMP) loadFromExcel(false);
+  const err = document.getElementById("loginErr");
+  const id  = normaliseId(document.getElementById("loginEmail").value);
+  if(!id){ err.textContent = "Enter your employee ID."; return; }
+
+  const emp = DB.employees[id];
+  if(!emp){
+    err.textContent = (SYNC_ON() && !DIRECTORY_READY)
+      ? "Still loading the directory \u2014 try again in a moment."
+      : "No active employee with ID " + id + ".";
+    return;
+  }
+  err.textContent = "";
+
+  const sheetRole = emp.role || (id === "E-0001" ? "HR Admin" : "Employee");
+  CURRENT_ACCOUNT = emp.email || id;
+  CURRENT_EMP = id;
+  IS_ADMIN = (sheetRole === "HR Admin");
+
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("appShell").style.display = "flex";
+  document.getElementById("rolePick").style.display = IS_ADMIN ? "block" : "none";
+  document.getElementById("acctLine").innerHTML =
+    "Signed in as<br><b>" + emp.name + "</b>"
+    + '<br><span style="opacity:.65">' + id + " \u00b7 " + sheetRole + "</span>";
+
+  const land = ROLE_FROM_SHEET[sheetRole] || "employee";
+  const hats = Array.from(new Set([land].concat(availableRoles(id))))
+                    .filter(r => r !== "leader" && r !== "hr");
+  buildHatSwitcher(hats);
+  if(!IS_ADMIN) ACTOR = id;
+  setRole(land);
+  loadFromExcel(false);   // reload so row-level visibility applies for this role
 };
 
+/* the directory has to exist before anyone can sign in, so pull it up front */
 syncPill();
+if(SYNC_ON()){
+  loadFromExcel(false).then(() => {
+    DIRECTORY_READY = (SYNC_STATE === "live");
+    dirNote(DIRECTORY_READY
+      ? "Enter the employee ID from your HR record."
+      : "Directory unavailable \u2014 check your connection and reload.");
+  });
+} else {
+  DIRECTORY_READY = true;
+  dirNote("Enter the employee ID from your HR record.");
+}
 
 </script>
 </body>
