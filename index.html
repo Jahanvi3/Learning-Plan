@@ -261,8 +261,8 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
   <div class="loginbox">
     <div class="lb-brand"><span class="dot"></span>Talent Studio</div>
     <div class="lb-sub">Sign in to your workspace</div>
-    <label class="lb-lab">Employee ID</label>
-    <input type="text" id="loginEmail" class="lb-input" placeholder="E-5102" autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter')doLogin()">
+    <label class="lb-lab">Work email</label>
+    <input type="email" id="loginEmail" class="lb-input" placeholder="you@altudo.co" autocomplete="username" spellcheck="false" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="lb-btn" onclick="doLogin()">Sign in</button>
     <div class="lb-err" id="loginErr"></div>
     <div class="lb-demo">
@@ -2120,7 +2120,15 @@ function dirNote(txt){
   if(el) el.textContent = txt;
 }
 
-/* "5102", "e5102", " E-5102 " all resolve to E-5102 */
+/* match on WorkEmail from the Employees sheet, case- and space-insensitive */
+function findByEmail(raw){
+  const e = String(raw||"").trim().toLowerCase();
+  if(!e) return "";
+  const hit = Object.keys(DB.employees).find(id =>
+    String(DB.employees[id].email||"").trim().toLowerCase() === e);
+  return hit || "";
+}
+/* fallback so an employee ID typed into the box still works: "5102" -> "E-5102" */
 function normaliseId(raw){
   const s = String(raw||"").trim().toUpperCase().replace(/\s+/g, "");
   if(!s) return "";
@@ -2129,14 +2137,15 @@ function normaliseId(raw){
 
 doLogin = function(){
   const err = document.getElementById("loginErr");
-  const id  = normaliseId(document.getElementById("loginEmail").value);
-  if(!id){ err.textContent = "Enter your employee ID."; return; }
+  const raw = (document.getElementById("loginEmail").value || "").trim();
+  if(!raw){ err.textContent = "Enter your work email."; return; }
 
-  const emp = DB.employees[id];
+  const id = findByEmail(raw) || (raw.indexOf("@") === -1 ? normaliseId(raw) : "");
+  const emp = id ? DB.employees[id] : null;
   if(!emp){
     err.textContent = (SYNC_ON() && !DIRECTORY_READY)
       ? "Still loading the directory \u2014 try again in a moment."
-      : "No active employee with ID " + id + ".";
+      : "No active account for " + raw + ".";
     return;
   }
   err.textContent = "";
@@ -2168,12 +2177,12 @@ if(SYNC_ON()){
   loadFromExcel(false).then(() => {
     DIRECTORY_READY = (SYNC_STATE === "live");
     dirNote(DIRECTORY_READY
-      ? "Enter the employee ID from your HR record."
+      ? "Use the work email on your HR record."
       : "Directory unavailable \u2014 check your connection and reload.");
   });
 } else {
   DIRECTORY_READY = true;
-  dirNote("Enter the employee ID from your HR record.");
+  dirNote("Use the work email on your HR record.");
 }
 
 </script>
