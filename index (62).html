@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Live build: syncs with TalentPortal_Data.xlsx + TalentPortal_Permissions.xlsx
+     through ONE Power Automate flow. Paste FLOW_URL near the bottom of this file. -->
+<title>Talent Studio — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.2.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0F1B2D;--ink2:#1B2A42;--paper:#F4F5F2;--card:#FFFFFF;
+  --line:#E3E5E0;--line2:#CBCFC8;--text:#1A2231;--t2:#5D6675;--t3:#8A929E;
+  --jade:#0F7B69;--jadebg:#E4F0EC;--amber:#B0710C;--amberbg:#FBF0DC;
+  --rust:#9E3B33;--rustbg:#F8E8E5;--violet:#5B4B9E;--violetbg:#EDEAF7;
+  --blue:#1F6FB2;--bluebg:#E4F0FA;--r:9px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--text);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.serif{font-family:'Fraunces',Georgia,serif}
+.shell{display:flex;min-height:100vh}
+
+/* sidebar */
+.side{width:246px;flex:0 0 246px;background:var(--ink);color:#DDE2EA;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.09)}
+.brand .mk{font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:#fff;display:flex;align-items:center;gap:9px}
+.brand .dot{width:8px;height:8px;border-radius:50%;background:#2FBFA5}
+.brand .sb{font-size:10px;color:#7C899C;margin-top:5px;letter-spacing:.08em;text-transform:uppercase}
+
+.rolepick{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.09)}
+.rolepick label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6F7C90;display:block;margin-bottom:8px}
+.rolerow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.rolebtn{background:var(--ink2);border:1px solid rgba(255,255,255,.12);color:#C3CCDA;font-family:inherit;font-size:11.5px;
+  padding:8px 6px;border-radius:7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:.15s}
+.rolebtn .ti{font-size:16px}
+.rolebtn:hover{background:#26374F;color:#fff}
+.rolebtn.on{background:#2FBFA5;border-color:#2FBFA5;color:#06281F;font-weight:500}
+.aswho{padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.09)}
+.aswho label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6F7C90;display:block;margin-bottom:7px}
+.aswho select{width:100%;background:var(--ink2);color:#EDF1F6;border:1px solid rgba(255,255,255,.14);border-radius:7px;padding:8px 9px;font-family:inherit;font-size:12.5px;cursor:pointer}
+.aswho .m{margin-top:9px;font-size:11.5px;color:#8F9BAD;line-height:1.5}
+.aswho .m b{color:#DDE2EA;font-weight:500}
+.idcard{display:flex;align-items:center;gap:11px;background:var(--ink2);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 12px}
+.idav{width:38px;height:38px;flex:0 0 38px;border-radius:50%;background:#2FBFA5;color:#06281F;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600}
+.idmeta{min-width:0;line-height:1.35}
+.idname{font-size:13.5px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.idrole{font-size:11.5px;color:#B9C3D1}
+.idsub{font-size:10.5px;color:#7E8DA3;margin-top:1px}
+
+nav{padding:12px 10px;flex:1;overflow-y:auto}
+.navlab{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#5F6C80;padding:8px 8px 6px}
+.tab{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 11px;margin-bottom:2px;border:0;border-radius:7px;
+  background:transparent;color:#B9C3D1;font-family:inherit;font-size:13px;cursor:pointer;transition:.15s}
+.tab:hover:not(:disabled){background:rgba(255,255,255,.06);color:#fff}
+.tab.on{background:#22344F;color:#fff;font-weight:500}
+.tab.on .ic{color:#2FBFA5}
+.tab:disabled{opacity:.3;cursor:not-allowed}
+.tab .ic{width:17px;flex:0 0 17px;text-align:center;font-size:15px;color:#7E8DA3}
+.tab .lk{margin-left:auto;font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:#6F7C90}
+.sfoot{padding:12px 18px;border-top:1px solid rgba(255,255,255,.09);font-size:10.5px;color:#6B778A;line-height:1.5}
+
+/* main */
+main{flex:1;min-width:0;padding:28px 36px 60px;max-width:1200px}
+.phead{margin-bottom:22px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.phead h1{font-family:'Fraunces',serif;font-size:27px;font-weight:600;letter-spacing:-.02em}
+.phead p{color:var(--t2);font-size:13px;margin-top:4px}
+.chip{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--t2);border:1px solid var(--line2);border-radius:999px;padding:5px 12px;background:#fff;white-space:nowrap}
+.view{display:none}.view.on{display:block;animation:fade .2s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* cards & bits */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:15px}
+.card h2{font-size:14px;font-weight:600;margin-bottom:3px}
+.card .hint{font-size:12.5px;color:var(--t3);margin-bottom:15px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:15px}
+.grid2 .card{margin-bottom:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:13px;margin-bottom:15px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px}
+.kpi .l{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.kpi .v{font-size:27px;font-weight:600;letter-spacing:-.03em;margin:5px 0 2px}
+.kpi .s{font-size:11.5px;color:var(--t3)}
+.rail{height:5px;background:#EDEFEB;border-radius:3px;overflow:hidden;margin-top:10px}
+.rail i{display:block;height:100%;border-radius:3px;transition:width .5s cubic-bezier(.3,1,.4,1)}
+.f-jade{background:var(--jade)}.f-amber{background:var(--amber)}.f-rust{background:var(--rust)}.f-blue{background:var(--blue)}.f-violet{background:var(--violet)}
+
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;letter-spacing:.02em;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.p-jade{background:var(--jadebg);color:#0A5648}.p-amber{background:var(--amberbg);color:#7A4E06}
+.p-rust{background:var(--rustbg);color:#7A2B25}.p-violet{background:var(--violetbg);color:#3F3376}
+.p-blue{background:var(--bluebg);color:#0C447C}.p-grey{background:#EDEFEB;color:#57606D}
+
+.kline{display:flex;align-items:center;gap:13px;padding:11px 0;border-bottom:1px solid var(--line)}
+.kline:last-child{border-bottom:0}
+.kline .nm{flex:1;font-size:13.5px}.kline .nm small{display:block;color:var(--t3);font-size:11.5px;margin-top:1px}
+.kline .bar{width:160px;flex:0 0 160px}.kline .pc{width:46px;flex:0 0 46px;text-align:right;font-size:13px;font-weight:500}
+
+table.tbl{width:100%;border-collapse:collapse;font-size:13px}
+table.tbl th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line)}
+table.tbl td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.tbl tr:last-child td{border-bottom:0}
+table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
+.av{width:30px;height:30px;border-radius:50%;background:var(--violetbg);color:#3F3376;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex:0 0 30px}
+.who{display:flex;align-items:center;gap:9px}
+
+.btn{font-family:inherit;font-size:13px;padding:8px 14px;border-radius:8px;border:1px solid var(--line2);background:#fff;color:var(--text);cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:#FAFBF9;border-color:var(--t3)}
+.btn.pri{background:var(--ink);color:#fff;border-color:var(--ink)}.btn.pri:hover{background:#22344F}
+.btn.jade{background:var(--jade);color:#fff;border-color:var(--jade)}.btn.jade:hover{opacity:.9}
+.btn.rust{background:#fff;color:var(--rust);border-color:var(--rust)}.btn.rust:hover{background:var(--rustbg)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{font-size:12px;padding:5px 10px}
+
+.empty{text-align:center;padding:46px 24px;border:1px dashed var(--line2);border-radius:12px;background:#FBFBF9}
+.empty .ei{font-size:24px;color:var(--t3);margin-bottom:10px}
+.empty h3{font-size:15px;font-weight:600;margin-bottom:5px}.empty p{font-size:13px;color:var(--t2);max-width:400px;margin:0 auto}
+
+.note{font-size:12.5px;color:var(--t2);background:#FBFBF9;border:1px solid var(--line);border-radius:8px;padding:11px 13px;line-height:1.55}
+.note.warn{background:var(--amberbg);border-color:#EAD9A8;color:#6B4A08}
+.dl{display:grid;grid-template-columns:150px 1fr;gap:8px 16px;font-size:13.5px}
+.dl dt{color:var(--t3);font-size:12.5px}.dl dd{font-weight:500}
+
+/* 9box */
+.box9{display:grid;grid-template-columns:24px repeat(3,1fr);grid-template-rows:repeat(3,74px) 24px;gap:5px;max-width:520px}
+.b9{border-radius:7px;padding:8px 9px;display:flex;flex-direction:column;justify-content:space-between;font-size:11px;line-height:1.3;border:1px solid transparent}
+.b9 .t{font-weight:500}.b9 .c{font-size:10px;color:var(--t3)}
+.b9.hit{border-color:var(--ink);background:var(--ink)!important}.b9.hit .t{color:#fff}.b9.hit .c{color:#8FD9CA}
+.axl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);display:flex;align-items:center;justify-content:center;grid-row:1/4}
+.axb{grid-column:2/5;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);display:flex;align-items:center;justify-content:center}
+
+/* swot */
+.swot{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.sq{border-radius:10px;padding:14px 16px;border:1px solid var(--line)}
+.sq h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:9px;font-weight:600}
+.sq ul{list-style:none}.sq li{font-size:12.5px;padding:4px 0 4px 14px;position:relative;line-height:1.45}
+.sq li:before{content:"";position:absolute;left:0;top:10px;width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.5}
+
+/* modal */
+.modal-bg{position:absolute;inset:0;background:rgba(15,27,45,.45);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:40px 20px}
+.modal-bg.on{display:flex}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:520px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:pop .18s ease}
+@keyframes pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:4px}
+.modal .sub{font-size:12.5px;color:var(--t3);margin-bottom:16px}
+.modal label{font-size:12px;color:var(--t2);display:block;margin:12px 0 5px;font-weight:500}
+.modal input[type=range]{width:100%}
+.modal textarea,.modal input[type=text]{width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px;resize:vertical}
+.modal textarea:focus,.modal input:focus{outline:2px solid var(--jade);outline-offset:1px;border-color:var(--jade)}
+.modal .foot{display:flex;gap:9px;justify-content:flex-end;margin-top:20px}
+
+.timeline{list-style:none;margin-top:6px}
+.timeline li{position:relative;padding:0 0 14px 20px;border-left:2px solid var(--line);margin-left:5px}
+.timeline li:last-child{border-left-color:transparent;padding-bottom:0}
+.timeline li:before{content:"";position:absolute;left:-6px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--jade);border:2px solid #fff}
+.timeline .tt{font-size:12.5px;font-weight:500}
+.timeline .td{font-size:11.5px;color:var(--t3);margin-top:1px}
+.timeline .tx{font-size:12.5px;color:var(--t2);margin-top:3px;line-height:1.5}
+
+.flag{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#7A4E06;background:var(--amberbg);padding:3px 9px;border-radius:6px}
+.badge-n{display:inline-block;min-width:18px;text-align:center;font-size:10px;font-weight:600;background:var(--rust);color:#fff;border-radius:9px;padding:1px 6px;margin-left:6px}
+:focus-visible{outline:2px solid var(--jade);outline-offset:2px}
+
+/* login screen */
+.loginwrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ink);padding:24px}
+.loginbox{background:#fff;border-radius:16px;width:100%;max-width:400px;padding:32px 30px;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.lb-brand{font-family:'Fraunces',serif;font-size:22px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:9px}
+.lb-brand .dot{width:9px;height:9px;border-radius:50%;background:#2FBFA5}
+.lb-sub{font-size:13px;color:var(--t2);margin:5px 0 24px}
+.lb-lab{font-size:12px;color:var(--t2);font-weight:500;display:block;margin-bottom:6px}
+.lb-input{width:100%;font-family:inherit;font-size:14px;padding:11px 13px;border:1px solid var(--line2);border-radius:9px}
+.lb-input:focus{outline:2px solid var(--jade);outline-offset:1px;border-color:var(--jade)}
+.lb-btn{width:100%;margin-top:16px;font-family:inherit;font-size:14px;font-weight:500;padding:11px;border:0;border-radius:9px;background:var(--ink);color:#fff;cursor:pointer;transition:.15s}
+.lb-btn:hover{background:#22344F}
+.lb-err{color:var(--rust);font-size:12.5px;margin-top:10px;min-height:16px}
+.lb-demo{margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+.lb-demo-lab{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);margin-bottom:10px}
+.lb-chip{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:12.5px;
+  padding:9px 12px;margin-bottom:6px;border:1px solid var(--line);border-radius:8px;background:#FBFBF9;color:var(--text);cursor:pointer;transition:.15s}
+.lb-chip:hover{background:var(--jadebg);border-color:#9FE1CB}
+.lb-chip .ti{font-size:15px;color:var(--jade)}
+.lb-note{font-size:11.5px;color:var(--t3);margin-top:8px;font-style:italic}
+.signout{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+  color:#C3CCDA;font-family:inherit;font-size:12px;padding:7px 12px;border-radius:7px;cursor:pointer;transition:.15s}
+.signout:hover{background:rgba(255,255,255,.14);color:#fff}
+#acctLine b{color:#DDE2EA;font-weight:500}
+
+/* toggle switch */
+.switch{position:relative;display:inline-block;width:42px;height:24px;flex:0 0 42px}
+.switch input{opacity:0;width:0;height:0;position:absolute}
+.switch .track{position:absolute;inset:0;background:#CBCFC8;border-radius:24px;transition:.2s;cursor:pointer}
+.switch .track:before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.switch input:checked + .track{background:var(--jade)}
+.switch input:checked + .track:before{transform:translateX(18px)}
+.switch input:focus-visible + .track{outline:2px solid var(--jade);outline-offset:2px}
+
+/* hover info tooltip */
+.info{position:relative;display:inline-flex;cursor:help;color:var(--t3);margin-left:6px;vertical-align:0}
+.info .ti{font-size:15px}
+.info:hover,.info:focus{color:var(--jade)}
+.info .tip{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);width:320px;max-width:78vw;
+  background:var(--ink);color:#E7ECF3;font-size:12px;line-height:1.6;font-weight:400;padding:14px 15px;border-radius:10px;
+  box-shadow:0 12px 34px rgba(0,0,0,.28);opacity:0;visibility:hidden;transition:.15s;z-index:70;text-align:left}
+.info .tip:before{content:"";position:absolute;left:50%;top:-6px;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:var(--ink)}
+.info .tip b{color:#fff}
+.info:hover .tip,.info:focus .tip{opacity:1;visibility:visible}
+.info-btn{border:1px solid var(--line2);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text);background:#fff;align-items:center;gap:5px;margin-left:0}
+.info-btn:hover,.info-btn:focus{background:var(--jadebg);border-color:#9FE1CB;color:#0A5648}
+.info-btn .tip{font-size:12px;font-weight:400}
+.modal input[type=date]{width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px}
+.iconbtn{border:1px solid var(--line2);background:#fff;border-radius:7px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);flex:0 0 30px;transition:.15s}
+.iconbtn:hover{background:var(--jadebg);border-color:#9FE1CB;color:var(--jade)}
+.iconbtn .ti{font-size:15px}
+
+/* permission matrix rows */
+.permhead{display:grid;grid-template-columns:1fr 84px 84px;gap:8px;padding:6px 0 8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--line)}
+.permhead span:not(:first-child){text-align:center}
+.permrow{display:grid;grid-template-columns:1fr 84px 84px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.permrow:last-child{border-bottom:0}
+.permrow.sub{background:#FBFBF9}
+.permlabel{font-size:13px;font-weight:500}
+.permrow.sub .permlabel{font-size:12.5px;font-weight:400;color:var(--t2);padding-left:6px}
+.subarrow{color:var(--t3);margin-right:6px}
+.permtoggle{display:flex;flex-direction:column;align-items:center;gap:3px}
+.permcap{font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
+@media(max-width:600px){.permhead,.permrow{grid-template-columns:1fr 64px 64px}}
+/* 4-toggle rows (employee + mentor) */
+.permhead4{display:grid;grid-template-columns:1fr 70px 70px 70px 70px;gap:6px;padding:6px 0 6px;font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
+.permhead4 span:not(:first-child){text-align:center}
+.permhead4 .colgrp{color:var(--jade);font-weight:600;border-bottom:1px solid var(--line);padding-bottom:4px}
+.permhead4.sub2{border-bottom:1px solid var(--line);padding-bottom:8px}
+.permrow4{display:grid;grid-template-columns:1fr 70px 70px 70px 70px;gap:6px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.permrow4:last-child{border-bottom:0}
+.permrow4.sub{background:#FBFBF9}
+.permrow4.sub .permlabel{font-size:12.5px;font-weight:400;color:var(--t2);padding-left:6px}
+.permrow4 .permtoggle{align-items:center}
+@media(max-width:640px){.permhead4,.permrow4{grid-template-columns:1fr 48px 48px 48px 48px;gap:3px}}
+.req{color:var(--rust);font-weight:600;margin-left:2px}
+.lberr{color:var(--rust);font-size:12.5px;margin-top:10px;min-height:16px}
+/* top-right "Logged in as" hat switcher */
+.hatswitch{display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--line2);border-radius:10px;padding:7px 12px}
+.hatswitch .hatlab{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);white-space:nowrap}
+.hatswitch select{font-family:inherit;font-size:13px;font-weight:500;padding:5px 8px;border:1px solid var(--line2);border-radius:7px;background:var(--jadebg);color:#0A5648;cursor:pointer}
+.hatswitch select:focus{outline:2px solid var(--jade);outline-offset:1px}
+.toast{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:13px;padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:.3s;z-index:60}
+.toast.on{opacity:1}
+
+@media(max-width:900px){
+  .shell{flex-direction:column}.side{width:100%;flex:none;height:auto;position:static}
+  nav{display:flex;overflow-x:auto;gap:4px;padding:10px}.navlab,.sfoot{display:none}
+  .tab{white-space:nowrap;margin-bottom:0}.tab .lk{display:none}
+  main{padding:20px 16px 44px}.swot{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="loginwrap" id="loginScreen">
+  <div class="loginbox">
+    <div class="lb-brand"><span class="dot"></span>Talent Studio</div>
+    <div class="lb-sub">Sign in to your workspace</div>
+    <label class="lb-lab">Work email</label>
+    <input type="text" id="loginEmail" class="lb-input" placeholder="you@altudo.co" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+    <input type="password" id="loginPass" class="lb-input" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" style="margin-top:8px">
+    <button class="lb-btn" onclick="doLogin()">Sign in</button>
+    <div class="lb-err" id="loginErr"></div>
+    <div class="lb-demo">
+      <div class="lb-demo-lab">Demo accounts — click to fill</div>
+      <button class="lb-chip" onclick="fill('employee@altudo.co')"><span class="ti ti-user"></span>employee@altudo.co</button>
+      <button class="lb-chip" onclick="fill('mentor@altudo.co')"><span class="ti ti-users"></span>mentor@altudo.co</button>
+      <button class="lb-chip" onclick="fill('leadership@altudo.co')"><span class="ti ti-chart-dots"></span>leadership@altudo.co</button>
+      <button class="lb-chip" onclick="fill('admin@altudo.co')"><span class="ti ti-settings"></span>admin@altudo.co</button>
+      <div class="lb-note">Any password works in this prototype.</div>
+    </div>
+  </div>
+</div>
+
+<div class="shell" id="appShell" style="display:none">
+  <aside class="side">
+    <div class="brand">
+      <div class="mk"><span class="dot"></span>Talent Studio</div>
+      <div class="sb">Prototype · sample data</div>
+    </div>
+
+    <div class="rolepick" id="rolePick" style="display:none">
+      <label>View as <span style="color:#7C899C;text-transform:none;letter-spacing:0">(admin)</span></label>
+      <div class="rolerow">
+        <button class="rolebtn on" data-role="employee" onclick="setRole('employee')"><span class="ti ti-user"></span>Employee</button>
+        <button class="rolebtn" data-role="mentor" onclick="setRole('mentor')"><span class="ti ti-users"></span>Mentor</button>
+        <button class="rolebtn" data-role="leader" onclick="setRole('leader')"><span class="ti ti-chart-dots"></span>Leadership</button>
+        <button class="rolebtn" data-role="hr" onclick="setRole('hr')"><span class="ti ti-settings"></span>HR admin</button>
+      </div>
+    </div>
+
+    <div class="aswho" id="asWhoWrap">
+      <label id="asWhoLabel">Your record</label>
+      <div id="asWhoCard"></div>
+      <select id="asWho" onchange="setActor(this.value)" style="display:none"></select>
+    </div>
+
+    <nav id="nav"></nav>
+    <div class="sfoot">
+      <div id="acctLine" style="margin-bottom:8px"></div>
+      <button class="signout" onclick="signOut()"><span class="ti ti-logout" style="font-size:14px"></span>Sign out</button>
+      <div style="margin-top:8px">Access &amp; multi-user state are simulated in-memory.</div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="phead">
+      <div><h1 id="pgTitle">—</h1><p id="pgSub">—</p></div>
+      <div class="hatswitch" id="hatSwitch" style="display:none"></div>
+    </div>
+    <div id="viewHost"></div>
+  </main>
+
+  <div class="modal-bg" id="modalBg"><div class="modal" id="modalBody"></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+<script>
+/* ============ IN-MEMORY STORE (seeded sample data) ============ */
+const DB = {
+  employees: {
+    "E-5101":{id:"E-5101",name:"Rajat Babbar",fn:"Enabling",sub:"Human Resources",desig:"Lead",lvl:4,mgr:null,hipot:true,hcat:"Below Managers",loc:"Gurugram"},
+    "E-5102":{id:"E-5102",name:"Ayushi Taneja",fn:"Enabling",sub:"Human Resources",desig:"Senior Associate",lvl:3,mgr:"E-5101",hipot:false,hcat:"",loc:"Gurugram"},
+    "E-5103":{id:"E-5103",name:"Jahanvi Batra",fn:"Enabling",sub:"Human Resources",desig:"Junior Associate",lvl:1,mgr:"E-5101",hipot:false,hcat:"",loc:"Gurugram"},
+    "E-5104":{id:"E-5104",name:"Manisha Naik",fn:"Enabling",sub:"Finance",desig:"Associate Lead",lvl:4,mgr:null,hipot:false,hcat:"",loc:"Gurugram"},
+    "E-5105":{id:"E-5105",name:"Krati Srivastava",fn:"Enabling",sub:"Finance",desig:"Junior Associate",lvl:1,mgr:"E-5104",hipot:false,hcat:"",loc:"Gurugram"},
+    "E-0001":{id:"E-0001",name:"HR System Admin",fn:"HR",sub:"HR",desig:"HR Admin",lvl:0,mgr:null,hipot:false,hcat:"",loc:"—"}
+  },
+
+  /* typed pairings: Rajat mentors his two reports */
+  pairings:[
+    {id:"P-001",mentee:"E-5102",mentor:"E-5101",type:"Career",status:"Active"},
+    {id:"P-002",mentee:"E-5103",mentor:"E-5101",type:"Career",status:"Active"}
+  ],
+
+  /* targets — empty; add in-app */
+  targets:[],
+
+  /* next role + action plan — empty; set in-app */
+  career:{},
+
+  /* succession bench — empty */
+  succession:[],
+
+  ninebox:{},
+
+  f360:{},
+
+  certs:{},
+
+  projects:{},
+
+  swot:{},
+
+  /* interaction log per pairing id — empty */
+  interactions:{},
+
+  kpi:{},
+
+  /* access grants — HR admin only for now */
+  grants:{
+    "E-5104":{login:"Leadership",fnScope:"All",minLvl:0,tree:false,seeRisk:true},
+    "E-0001":{login:"HR Admin",fnScope:"All",minLvl:0,tree:false,seeRisk:true}
+  },
+
+  config:{
+    hipotDef:"Independent",
+    empSeeBox:false,
+    empSeeHipot:false,
+    menteeSeeNotes:false,
+    readinessSrc:"Manual",
+    defaultApprover:"Line Manager",
+    careerPathSelectable:true,
+    approvalsPaused:false
+  },
+
+  /* ===== component permission registry =====
+     every module + sub-component has { vis, edit } controlled by HR admin.
+     vis=false -> hidden for non-admin; edit=false -> edit/add/update controls hidden for non-admin.
+     Admin always sees & edits everything. */
+  perms:{
+    // employee modules
+    "kpi":{vis:true,edit:true},
+    "career":{vis:true,edit:true},
+    "career.path":{vis:true,edit:true},        // path selection
+    "career.milestone":{vis:true,edit:true},
+    "career.readiness":{vis:true,edit:true},
+    "learning":{vis:true,edit:true},
+    "learning.actions":{vis:true,edit:true},   // 70:20:10 dev actions
+    "learning.status":{vis:true,edit:true},    // status updates
+    "hipot":{vis:true,edit:true},
+    "hipot.targets":{vis:true,edit:true},
+    "succ":{vis:true,edit:true},
+    "succ.mine":{vis:true,edit:true},          // successors for my role
+    "succ.iam":{vis:true,edit:true},           // roles I'm a successor for
+    "analysis":{vis:true,edit:true},
+    "analysis.ninebox":{vis:true,edit:true},
+    "analysis.f360":{vis:true,edit:true},
+    "analysis.certs":{vis:true,edit:true},
+    "analysis.projects":{vis:true,edit:true},
+    "analysis.swot":{vis:true,edit:true},
+    // mentor modules
+    "queue":{vis:true,edit:true},
+    "mentees":{vis:true,edit:true},
+    "interactions":{vis:true,edit:true},
+    // leader modules
+    "overview":{vis:true,edit:true},
+    "hipots":{vis:true,edit:true},
+    "succmap":{vis:true,edit:true},
+    "nextroles":{vis:true,edit:true}
+  },
+
+  /* mentor-context permissions: what a MENTOR sees/edits on a mentee's learning page.
+     Kept separate so HR can grant mentors different rights than the employee has on their own view. */
+  permsMentor:{
+    "kpi":{vis:true,edit:true},
+    "career":{vis:true,edit:true},
+    "career.path":{vis:true,edit:true},
+    "career.milestone":{vis:true,edit:true},
+    "career.readiness":{vis:true,edit:true},
+    "learning":{vis:true,edit:true},
+    "learning.actions":{vis:true,edit:true},
+    "learning.status":{vis:true,edit:true},
+    "hipot":{vis:true,edit:true},
+    "hipot.targets":{vis:true,edit:true},
+    "succ":{vis:true,edit:true},
+    "succ.mine":{vis:true,edit:true},
+    "succ.iam":{vis:true,edit:true},
+    "analysis":{vis:true,edit:true},
+    "analysis.ninebox":{vis:true,edit:true},
+    "analysis.f360":{vis:true,edit:true},
+    "analysis.certs":{vis:true,edit:true},
+    "analysis.projects":{vis:true,edit:true},
+    "analysis.swot":{vis:true,edit:true},
+    "queue":{vis:true,edit:true},
+    "mentees":{vis:true,edit:true},
+    "interactions":{vis:true,edit:true}
+  },
+
+  /* learning plan actions — 70:20:10, per employee.
+     edits route to the tagged mentor for approval; changelog holds the trail. */
+  learningPlans:{
+    "E-5101":{mentor:null,actions:[],changelog:[]},
+    "E-5102":{mentor:"E-5101",actions:[],changelog:[]},
+    "E-5103":{mentor:"E-5101",actions:[],changelog:[]},
+    "E-5104":{mentor:null,actions:[],changelog:[]},
+    "E-5105":{mentor:"E-5104",actions:[],changelog:[]}
+  }
+};
+
+/* ============ helpers ============ */
+const E = id => DB.employees[id];
+const nm = id => (E(id)?E(id).name:id);
+const initials = s => s.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
+const READINESS_OPTIONS = ["Ready now","6 to 12 Months","1 to 2 Year","2 to 3 Year","3+ Years"];
+const RD_PC = {
+  "Ready now":95,"6 to 12 Months":60,"1 to 2 Year":42,"2 to 3 Year":30,"3+ Years":15,
+  // legacy labels kept for existing seed data
+  "Ready Now":95,"Ready in 6-12 months":60,"Ready in 1-2 years":42,"Not ready but high potential":25,"Ready in 3+ years":15
+};
+const rdColor = r => {
+  if(!r) return "amber";
+  const s=String(r).toLowerCase();
+  if(s.includes("ready now")) return "jade";
+  if(s.includes("6")&&s.includes("12")) return "amber";
+  if(s.includes("high potential")) return "rust";
+  if(s.includes("3+")||s.includes("3 +")) return "rust";
+  return "amber";
+};
+function menteesOf(mid){return DB.pairings.filter(p=>p.mentor===mid&&p.status==="Active");}
+function pairingsOfMentee(eid){return DB.pairings.filter(p=>p.mentee===eid);}
+function targetsOf(eid){return DB.targets.filter(t=>t.emp===eid);}
+function reviewQueueFor(mid){
+  const mm=new Set(menteesOf(mid).map(p=>p.mentee));
+  return DB.targets.filter(t=>t.status==="Submitted for review"&&t.approver===mid&&mm.has(t.emp));
+}
+function subtree(rootId){
+  const out=[];const stack=[rootId];
+  while(stack.length){const cur=stack.pop();
+    Object.values(DB.employees).forEach(e=>{if(e.mgr===cur){out.push(e.id);stack.push(e.id);}});}
+  return out;
+}
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("on");setTimeout(()=>t.classList.remove("on"),1900);}
+function bar(pc,c){return `<div class="rail"><i class="f-${c}" style="width:${Math.round(pc)}%"></i></div>`;}
+/* permission helpers — role-aware. Employee uses DB.perms; mentor context uses DB.permsMentor.
+   "Mentor context" = a mentor editing a mentee's learning page (ROLE==='mentor' with a mentee's learning plan open). */
+function permReg(){
+  // when a mentor is viewing/editing a mentee's page, ACTOR is the mentee and ROLE is 'mentor'
+  return (typeof ROLE!=="undefined" && ROLE==="mentor") ? DB.permsMentor : DB.perms;
+}
+function isVisible(key){ if(typeof IS_ADMIN!=="undefined"&&IS_ADMIN) return true; const p=permReg()[key]; return !p||p.vis!==false; }
+function isEditable(key){ if(typeof IS_ADMIN!=="undefined"&&IS_ADMIN) return true; const p=permReg()[key]; return !!p&&p.edit!==false; }
+/* active career path for a given employee (multi-path aware) */
+function curPath(eid){
+  const c=DB.career[eid]; if(!c||!c.paths||!c.paths.length) return null;
+  const i=Math.min(c.selectedPath||0,c.paths.length-1);
+  return c.paths[i];
+}
+</script>
+<script>
+/* ============ APP STATE ============ */
+let ROLE="employee";
+let ACTOR="E-5102";     // employee/mentor identity
+let TAB="kpi";
+
+const ROLE_ACTORS={
+  employee:["E-5101","E-5102","E-5103","E-5104","E-5105"],
+  mentor:["E-5101","E-5104"],
+  leader:["E-5101"],
+  hr:["E-0001"]
+};
+const NAVS={
+  employee:[
+    ["kpi","My KPI","ti-target-arrow"],
+    ["career","My Career path","ti-stairs-up"],
+    ["learning","My Learning Plan","ti-book"],
+    ["hipot","HiPot targets","ti-rocket"],
+    ["succ","Succession Planning","ti-users-group"],
+    ["analysis","My Analysis","ti-chart-dots"]
+  ],
+  mentor:[
+    ["mentees","My mentees","ti-users"],
+    ["interactions","Interactions","ti-messages"]
+  ],
+  leader:[
+    ["overview","Org overview","ti-layout-dashboard"],
+    ["hipots","HiPots","ti-rocket"],
+    ["succmap","Succession map","ti-sitemap"],
+    ["nextroles","Next roles","ti-stairs-up"]
+  ],
+  hr:[
+    ["master","Employee master","ti-database"],
+    ["sections","Section visibility","ti-eye-cog"],
+    ["config","Policy & config","ti-adjustments"],
+    ["access","Access grants","ti-key"],
+    ["integrity","Data integrity","ti-checkup"]
+  ]
+};
+const TITLES={
+  kpi:["My KPI","Where you stand against this year's targets."],
+  career:["My Career path","Your ladder, next role and the actions required."],
+  learning:["My Learning Plan","Your development milestone, readiness and the learning to get there."],
+  hipot:["HiPot targets","Your accelerated development track. Update progress and submit for review."],
+  succ:["Succession Planning","Who succeeds your role — and whose successor you are."],
+  analysis:["My Analysis","Nine-box, 360, certifications, projects and SWOT."],
+  queue:["Review queue","Progress updates from your mentees awaiting your approval."],
+  mentees:["My mentees","Everyone you mentor, across all pairing types."],
+  interactions:["Interactions","Session notes and the logged history per mentee."],
+  overview:["Org overview","Top-down health of the talent you can see."],
+  hipots:["HiPots","Every high-potential in scope and their live targets."],
+  succmap:["Succession map","Critical roles, coverage and successor readiness."],
+  nextroles:["Next roles","Where each person in your scope is heading."],
+  master:["Employee master","The core employee record — the join key for every module. Edit or add people here."],
+  sections:["Section visibility","Show or hide left-nav sections for each role. Admin always sees all."],
+  config:["Policy & config","Org-wide talent decisions."],
+  access:["Access grants","Who logs in as what, and what they can see."],
+  integrity:["Data integrity","Referential checks across the sample data."]
+};
+
+/* ============ ROLE / NAV WIRING ============ */
+function setRole(r){
+  ROLE=r;
+  document.querySelectorAll(".rolebtn").forEach(b=>b.classList.toggle("on",b.dataset.role===r));
+  // Admin impersonates via ROLE_ACTORS; a real logged-in person keeps their own identity across hats.
+  if(IS_ADMIN){ ACTOR=ROLE_ACTORS[r][0]; }
+  else if(typeof CURRENT_EMP!=="undefined" && CURRENT_EMP){ ACTOR=CURRENT_EMP; }
+  else { ACTOR=ROLE_ACTORS[r][0]; }
+  TAB=NAVS[r][0][0];
+  const wrap=document.getElementById("asWhoWrap");
+  wrap.style.display = (r==="hr") ? "none" : "block";
+  const sel=document.getElementById("asWho");
+  const card=document.getElementById("asWhoCard");
+  if(IS_ADMIN){
+    // admin: real identity switcher via dropdown
+    sel.style.display="block"; card.style.display="none";
+    sel.innerHTML="";
+    ROLE_ACTORS[r].forEach(id=>{const o=document.createElement("option");o.value=id;o.textContent=nm(id)+" — "+E(id).desig;sel.appendChild(o);});
+    if(ACTOR && !ROLE_ACTORS[r].includes(ACTOR) && E(ACTOR)){const o=document.createElement("option");o.value=ACTOR;o.textContent=nm(ACTOR)+" — "+E(ACTOR).desig;sel.appendChild(o);}
+    sel.value=ACTOR; sel.disabled=false;
+    document.getElementById("asWhoLabel").textContent =
+      r==="employee"?"Inspect employee":r==="mentor"?"Inspect mentor":"Inspect leader";
+  }else{
+    // real person: clean identity card, no dropdown
+    sel.style.display="none"; card.style.display="block";
+    document.getElementById("asWhoLabel").textContent="Your record";
+  }
+  buildNav();updateMeta();render();
+}
+function setActor(id){ACTOR=id;TAB=NAVS[ROLE][0][0];buildNav();updateMeta();render();}
+function buildNav(){
+  const nav=document.getElementById("nav");
+  let h=`<div class="navlab">${ROLE==="hr"?"Administration":ROLE==="leader"?"Leadership view":ROLE==="mentor"?"Mentoring":"Your record"}</div>`;
+  // Admin always sees all tabs; other roles only see sections HR left visible.
+  const visTabs=NAVS[ROLE].filter(([id])=>ROLE==="hr"||isVisible(id));
+  // if current TAB was hidden, fall back to first visible
+  if(!visTabs.some(([id])=>id===TAB)) TAB=(visTabs[0]||NAVS[ROLE][0])[0];
+  visTabs.forEach(([id,label,ic])=>{
+    let dis=false,badge="";
+    if(ROLE==="employee"&&id==="hipot"&&!E(ACTOR).hipot) dis=true;
+    if(ROLE==="mentor"&&id==="queue"){const n=reviewQueueFor(ACTOR).length;if(n)badge=`<span class="badge-n">${n}</span>`;}
+    h+=`<button class="tab ${id===TAB?"on":""}" ${dis?"disabled":""} onclick="go('${id}')">
+      <span class="ic ti ${ic}"></span>${label}${badge}${dis?'<span class="lk">n/a</span>':""}</button>`;
+  });
+  nav.innerHTML=h;
+}
+function updateMeta(){
+  if(ROLE==="hr"){return;}
+  const e=E(ACTOR); if(!e) return;
+  if(IS_ADMIN){
+    // admin uses the dropdown; nothing extra to render
+    return;
+  }
+  const card=document.getElementById("asWhoCard"); if(!card) return;
+  let sub2="";
+  if(ROLE==="mentor") sub2=`${menteesOf(ACTOR).length} mentees`;
+  else if(ROLE==="leader"){const g=DB.grants[ACTOR];sub2=g?`scope: ${g.fnScope}, L${g.minLvl}+`:"";}
+  else sub2=`${e.fn}${e.sub&&e.sub!==e.fn?" · "+e.sub:""}`;
+  card.innerHTML=`<div class="idcard">
+    <div class="idav">${initials(e.name)}</div>
+    <div class="idmeta">
+      <div class="idname">${e.name}</div>
+      <div class="idrole">${e.desig}</div>
+      <div class="idsub">${sub2}</div>
+    </div>
+  </div>`;
+}
+function go(t){TAB=t;buildNav();render();}
+
+/* ============ MAIN RENDER DISPATCH ============ */
+function render(){
+  const[t,s]=TITLES[TAB]||["—","—"];
+  document.getElementById("pgTitle").textContent=t;
+  document.getElementById("pgSub").textContent=s;
+  const host=document.getElementById("viewHost");
+  const fn={
+    kpi:vKPI,career:vCareer,learning:vLearning,hipot:vHipot,succ:vSucc,analysis:vAnalysis,
+    queue:vQueue,mentees:vMentees,interactions:vInteractions,
+    overview:vOverview,hipots:vHipots,succmap:vSuccMap,nextroles:vNextRoles,
+    config:vConfig,access:vAccess,integrity:vIntegrity,sections:vSections,master:vMaster
+  }[TAB];
+  host.innerHTML=`<div class="view on">${fn?fn():"—"}</div>`;
+}
+
+/* ============ EMPLOYEE VIEWS ============ */
+function vKPI(){
+  const k=DB.kpi[ACTOR]||[];
+  const cards=k.map(x=>`<div class="kpi"><div class="l">${x.n}</div><div class="v mono">${x.v}</div>${bar(x.pc,x.c)}</div>`).join("");
+  const t=targetsOf(ACTOR).filter(x=>x.type==="Performance"||x.type==="HiPot");
+  const lines=t.map(x=>`<div class="kline"><div class="nm">${x.title}<small>${x.desc}</small></div><div class="bar">${bar(x.progress,x.progress>=80?"jade":x.progress>=40?"amber":"rust")}</div><div class="pc mono">${x.progress}%</div></div>`).join("");
+  return `${k.length?`<div class="kpis">${cards}</div>`:""}
+    <div class="card"><h2>Objectives this cycle</h2><p class="hint">Tracked against your FY27 goal sheet.</p>${lines||'<div class="note">No objectives on record.</div>'}</div>`;
+}
+function vLearning(){
+  const c=curPath(ACTOR);
+  const eMile=canEditCareer()&&isEditable("career.milestone");
+  const eRead=canEditCareer()&&isEditable("career.readiness");
+  // Milestone + readiness — a live mirror of My Career path (same data, same editors)
+  const echo = c ? `<div class="grid2">
+      <div class="card"><h2 style="display:flex;align-items:center;justify-content:space-between">Next milestone
+        ${eMile?`<button class="btn sm" onclick="editMilestone()"><span class="ti ti-pencil" style="font-size:13px"></span>Edit</button>`:""}
+      </h2><p class="hint">Mirrors My Career path.</p>
+        <div class="serif" style="font-size:20px;font-weight:600">${c.next}</div></div>
+      <div class="card"><h2 style="display:flex;align-items:center;justify-content:space-between">Readiness
+        ${eRead?`<button class="btn sm" onclick="editReadiness()"><span class="ti ti-pencil" style="font-size:13px"></span>Edit</button>`:""}
+      </h2><p class="hint">Mirrors My Career path.</p>
+        <div style="margin-top:8px"><span class="pill p-${rdColor(c.readiness)}" style="font-size:13px;padding:5px 14px">${c.readiness}</span></div></div>
+    </div>`
+    : `<div class="note" style="margin-bottom:15px">No career milestone on record yet — set one in My Career path and it will echo here.</div>`;
+
+  return `${echo}
+    ${learningPlanTable()}`;
+}
+
+/* 70:20:10 band metadata */
+const BANDS={
+  "70":{label:"Learning by Doing (70%)",short:"70% · On the job",cls:"p-jade",owner:"Mentee (reviewed by Mentor)",
+    desc:"70% on the Job Experience: directly applying skills and knowledge in day-to-day work. This hands-on experience is crucial for deepening understanding and building competence. Maintained & tracked by the Mentee, reviewed by the Mentor."},
+  "20":{label:"Mentorship / Coaching (20%)",short:"20% · Coaching",cls:"p-violet",owner:"Mentor",
+    desc:"20% on Coaching and Mentoring: regular feedback, coaching and mentoring to enhance identified competencies. Maintained & tracked by the Mentor."},
+  "10":{label:"L&D Trainings (10%)",short:"10% · Self-learning",cls:"p-amber",owner:"Mentee (with L&D team)",
+    desc:"10% on Learning & Development: formal learning — courses, webinars, workshops, seminars — to keep expanding knowledge and staying relevant. Maintained & tracked by the Mentee in assistance with the L&D team."}
+};
+const IDEOLOGY_HTML=`<b>Altudo's 70:20:10 learning ideology</b><br><br>
+A balanced blend of hands-on experience, mentorship and self-directed learning:<br>
+• <b>70%</b> — doing the new role (hands-on application)<br>
+• <b>20%</b> — mentorship and coaching<br>
+• <b>10%</b> — self-directed L&amp;D (courses, webinars, workshops)<br><br>
+Most learning happens through practical application while actively performing the new role; mentorship accelerates growth through feedback and guidance; and self-directed learning builds autonomy and accountability. Together they ensure holistic development driving individual and organizational success.`;
+
+function fmtLADate(d){
+  if(!d) return "";
+  const p=String(d).split("-"); if(p.length!==3) return d;
+  const M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const mi=parseInt(p[1],10)-1;
+  return `${p[0].slice(2)}:${M[mi]||p[1]}:${p[2]}`;
+}
+function learningPlanTable(){
+  const lp=DB.learningPlans[ACTOR];
+  const menteesMentor = lp && (lp.mentor===ACTOR || (typeof CURRENT_EMP!=="undefined" && lp.mentor===CURRENT_EMP));
+  const canEdit = (ROLE==="employee" || (ROLE==="mentor" && menteesMentor) || IS_ADMIN) && isEditable("learning.actions");
+  const mentorName = lp ? nm(lp.mentor) : "—";
+  const rows = (lp&&lp.actions.length) ? lp.actions.map((a,i)=>{
+    const b=BANDS[a.band]||{};
+    const stPill = a.status==="Approved"?'<span class="pill p-jade">Approved</span>'
+      : a.status==="Pending"?'<span class="pill p-amber">Pending approval</span>'
+      : '<span class="pill p-grey">Draft</span>';
+    const tl = a.timeline&&a.timeline.start ? `${fmtLADate(a.timeline.start)} → ${fmtLADate(a.timeline.end)||"—"}` : '<span style="color:var(--t3)">not set</span>';
+    const stColor = a.update==="Achieved"?"p-jade":a.update==="Ongoing"?"p-amber":a.update==="Not started"?"p-grey":a.update==="Not relevant"?"p-grey":"p-grey";
+    const statusTxt = a.update ? `<span class="pill ${stColor}">${a.update}</span>${a.comment?`<div style="font-size:11px;color:var(--t3);margin-top:4px">${a.comment}</div>`:""}` : '<span style="color:var(--t3)">—</span>';
+    return `<tr>
+      <td class="mono" style="width:40px;color:var(--t3);text-align:center;vertical-align:top;padding-top:13px">${i+1}</td>
+      <td style="min-width:170px"><div style="font-weight:500">${a.title}</div></td>
+      <td><span class="pill ${b.cls||'p-grey'}">${b.short||a.band}</span><div style="font-size:11px;color:var(--t3);margin-top:3px">owner: ${b.owner||"—"}</div></td>
+      <td class="mono" style="font-size:12px;white-space:nowrap">${tl}</td>
+      <td style="min-width:150px;font-size:12.5px;color:var(--t2)">${statusTxt}</td>
+      <td style="text-align:right;white-space:nowrap;vertical-align:top">
+        ${canEdit?`<button class="btn sm" onclick="editLA('${a.id}')">Edit</button>`:""}
+      </td></tr>`;
+  }).join("") : `<tr><td colspan="6"><div class="note">No development actions yet. ${canEdit?'Use "Add action" below to start building the plan with your mentor.':''}</div></td></tr>`;
+
+  return `<div class="card">
+    <div style="margin-bottom:2px">
+      <h2 style="margin:0;display:inline-flex;align-items:center">Development actions for next role
+        <span class="info info-btn" tabindex="0" aria-label="About Altudo's 70:20:10 ideology" style="margin-left:10px">
+          <span class="ti ti-info-circle" style="font-size:14px"></span> 70:20:10 ideology
+          <span class="tip">${IDEOLOGY_HTML}</span>
+        </span>
+      </h2>
+    </div>
+    <p class="hint">Actions you and your mentor (${mentorName}) mutually agree, structured on Altudo's 70:20:10 model. Timeline &amp; band changes route to your mentor for approval; status updates are free-text and logged but need no approval.</p>
+    <table class="tbl"><thead><tr><th style="text-align:center">S.N.</th><th>Action</th><th>70:20:10 band</th><th>Timeline</th><th>Status update</th><th style="text-align:right"><button class="btn sm" style="display:inline-flex" onclick="showLog()"><span class="ti ti-history" style="font-size:13px"></span>Change log</button></th></tr></thead>
+    <tbody>${rows}</tbody></table>
+    ${canEdit?`<div style="margin-top:14px"><button class="btn sm pri" onclick="addLA()"><span class="ti ti-plus" style="font-size:13px"></span>Add action</button></div>`:""}
+  </div>`;
+}
+function vCareer(){
+  const cc=DB.career[ACTOR];
+  if(!cc||!cc.paths||!cc.paths.length) return `<div class="empty"><div class="ei ti ti-map-off"></div><h3>No career plan on record</h3><p>No career path has been defined for FY27. Raise this at your next check-in.</p></div>`;
+  const c=curPath(ACTOR);
+  const canEd=canEditCareer();
+  const pathLocked = !IS_ADMIN && DB.config.careerPathSelectable===false;
+  const canEditPath = canEd && isEditable("career.path");
+  const canEditMile = canEd && isEditable("career.milestone");
+  const canEditRead = canEd && isEditable("career.readiness");
+
+  // STEP 1 — path selector (hidden entirely if career.path not visible)
+  const pathCards = cc.paths.map((p,i)=>{
+    const on=i===(cc.selectedPath||0);
+    const clickable = canEditPath && cc.paths.length>1;
+    return `<button onclick="${clickable?`selectPath(${i})`:'return false'}" ${!clickable&&!on?"disabled":""} style="flex:1;min-width:200px;text-align:left;cursor:${clickable?"pointer":"default"};
+      border:1.5px solid ${on?"var(--jade)":"var(--line)"};background:${on?"var(--jadebg)":"#fff"};border-radius:11px;padding:14px 16px;font-family:inherit;transition:.15s">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span style="font-weight:600;font-size:14px;color:${on?"#0A5648":"var(--text)"}">${p.name}</span>
+        ${on?'<span class="pill p-jade">Selected</span>':(clickable?'<span class="pill p-grey">Choose</span>':'')}</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:6px">Targets: ${p.next} · ${p.ladder.length} levels</div>
+    </button>`;
+  }).join("");
+
+  const lockNote = (pathLocked||!canEditPath)
+    ? `<div class="note warn" style="margin-bottom:12px"><span class="ti ti-lock" style="font-size:14px"></span> Career-path selection is locked${pathLocked?" by HR policy":""}. Your path is fixed for this cycle — contact HR to change it.</div>`
+    : "";
+
+  const step1 = isVisible("career.path") ? `<div class="card"><h2><span class="mono" style="color:var(--jade);margin-right:8px">1</span>Choose your path
+      ${!canEditPath?'<span class="pill p-grey" style="margin-left:8px"><span class="ti ti-lock" style="font-size:11px"></span> locked</span>':''}</h2>
+    <p class="hint">${cc.paths.length>1?"You have more than one possible track. Pick the one you're aiming for — the ladder and milestone below update to match.":"Your defined career track."}</p>
+    ${lockNote}
+    <div style="display:flex;gap:12px;flex-wrap:wrap">${pathCards}</div></div>` : "";
+
+  // STEP 2 — ladder + milestone + readiness (below, driven by selected path)
+  const rungs=c.ladder.map((r,i)=>({r,i})).reverse().map(({r,i})=>{
+    const cls=i<c.atIdx?"past":i===c.atIdx?"now":i===c.atIdx+1?"next":"";
+    const bg=cls==="now"?"var(--ink)":cls==="next"?"#fff":"#F1F2EE";
+    const col=cls==="now"?"#fff":cls==="next"?"#0A5648":"var(--t3)";
+    const bd=cls==="next"?"1.5px dashed var(--jade)":"1px solid var(--line)";
+    const you=cls==="now"?'<span style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;background:#2FBFA5;color:#06281F;padding:2px 6px;border-radius:3px;font-weight:600;margin-left:auto">you</span>':'';
+    const nextTag=cls==="next"?'<span style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--jade);margin-left:auto">next</span>':'';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:${bg};border:${bd};color:${col};border-radius:9px;margin-bottom:7px">
+      <span class="mono" style="font-size:10px;opacity:.7;flex:0 0 26px">L${i+1}</span>
+      <span style="font-size:12.5px;font-weight:${cls?"600":"400"};line-height:1.3">${r}</span>${you}${nextTag}</div>`;
+  }).join("");
+
+  const step2=`<div style="margin-top:5px"><h2 style="font-size:14px;margin:0 0 12px"><span class="mono" style="color:var(--jade);margin-right:8px">2</span>Next milestone &amp; readiness</h2>
+    <div style="display:flex;gap:15px;align-items:flex-start;flex-wrap:wrap">
+      <div class="card" style="flex:0 0 260px;margin-bottom:0;min-width:230px">
+        <h2>Your ladder</h2><p class="hint">${c.name} · cohort ${cc.cohort}</p>${rungs}</div>
+      <div style="flex:1;min-width:280px">
+        <div class="card"><h2 style="display:flex;align-items:center;justify-content:space-between">Next milestone
+          ${canEditMile?`<button class="btn sm" onclick="editMilestone()"><span class="ti ti-pencil" style="font-size:13px"></span>Edit</button>`:""}
+        </h2><p class="hint">Agreed with your manager.</p>
+          <div class="serif" style="font-size:21px;font-weight:600">${c.next}</div></div>
+        <div class="card" style="margin-bottom:0"><h2 style="display:flex;align-items:center;justify-content:space-between">Readiness
+          ${canEditRead?`<button class="btn sm" onclick="editReadiness()"><span class="ti ti-pencil" style="font-size:13px"></span>Edit</button>`:""}
+        </h2>
+          <div style="margin-top:8px"><span class="pill p-${rdColor(c.readiness)}" style="font-size:13px;padding:5px 14px">${c.readiness}</span></div></div>
+      </div>
+    </div></div>`;
+
+  return step1+step2;
+}
+function selectPath(i){
+  if(!canEditCareer()){toast("Career-path selection is locked by HR");return;}
+  const cc=DB.career[ACTOR]; if(!cc) return;
+  cc.selectedPath=i; render();
+  toast("Path selected — ladder & milestone updated");
+}
+/* career editing: admin always; employee if path-selection enabled;
+   mentor when they're viewing/editing a mentee they own */
+function canEditCareer(){
+  if(IS_ADMIN) return true;
+  if(ROLE==="employee") return DB.config.careerPathSelectable!==false;
+  if(ROLE==="mentor"){
+    const lp=DB.learningPlans[ACTOR];
+    return !!(lp && typeof CURRENT_EMP!=="undefined" && lp.mentor===CURRENT_EMP);
+  }
+  return false;
+}
+function editMilestone(){
+  const c=curPath(ACTOR); if(!c) return;
+  const eligible=[];
+  if(c.ladder[c.atIdx+1]) eligible.push({role:c.ladder[c.atIdx+1],kind:"Immediate next"});
+  if(c.ladder[c.atIdx+2]) eligible.push({role:c.ladder[c.atIdx+2],kind:"Skip level"});
+  const opts = eligible.length
+    ? eligible.map(e=>`<option value="${e.role.replace(/"/g,'&quot;')}" ${c.next===e.role?"selected":""}>${e.role} — ${e.kind}</option>`).join("")
+    : `<option>${c.next||"No higher rung available"}</option>`;
+  const noMatch = c.next && !eligible.some(e=>e.role===c.next);
+  document.getElementById("modalBody").innerHTML=`
+    <h3>Edit next milestone</h3><div class="sub">${c.name} · only the immediate next or a skip-level rung.</div>
+    <label>Next role</label>
+    <select id="cmNext" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">
+      ${noMatch?`<option value="${(c.next||"").replace(/"/g,'&quot;')}" selected>${c.next} — current selection</option>`:""}
+      ${opts}
+    </select>
+    <div class="note" style="margin-top:10px;font-size:12px">Targets are limited to one or two rungs above your current level (${c.ladder[c.atIdx]||"—"}).</div>
+    <div class="foot"><button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn pri" onclick="saveMilestone()">Save</button></div>`;
+  document.getElementById("modalBg").classList.add("on");
+}
+function saveMilestone(){
+  const c=curPath(ACTOR); if(!c) return;
+  c.next=document.getElementById("cmNext").value||c.next;
+  closeModal();render();toast("Next milestone updated");
+}
+function editReadiness(){
+  const c=curPath(ACTOR); if(!c) return;
+  const opts=READINESS_OPTIONS.map(o=>`<option ${c.readiness===o?"selected":""}>${o}</option>`).join("");
+  document.getElementById("modalBody").innerHTML=`
+    <h3>Edit readiness</h3><div class="sub">${c.name} — readiness for your next role.</div>
+    <label>Readiness timeline</label>
+    <select id="crReady" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">${opts}</select>
+    <div class="foot"><button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn pri" onclick="saveReadiness()">Save</button></div>`;
+  document.getElementById("modalBg").classList.add("on");
+}
+function saveReadiness(){
+  const c=curPath(ACTOR); if(!c) return;
+  c.readiness=document.getElementById("crReady").value;
+  closeModal();render();toast("Readiness updated");
+}
+function vHipot(){
+  if(!E(ACTOR).hipot) return `<div class="empty"><div class="ei ti ti-lock"></div><h3>Not in the HiPot programme</h3><p>This tab is only available to the FY27 high-potential cohort.</p></div>`;
+  const e=E(ACTOR);
+  const hp=pairingsOfMentee(ACTOR).find(p=>p.type==="HiPot");
+  const ts=targetsOf(ACTOR).filter(t=>t.type==="HiPot"||t.type==="Standalone");
+  const rows=ts.map(t=>renderTargetRow(t,true)).join("");
+  return `<div class="card" style="border-color:var(--violet);border-width:1.5px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div><h2 style="margin-bottom:6px">FY27 high-potential cohort</h2><span class="pill p-violet">${e.hcat}</span></div>
+        <div style="text-align:right;font-size:12.5px;color:var(--t2)">Mentor<br><b>${hp?nm(hp.mentor):"—"}</b></div>
+      </div></div>
+    <div class="card"><h2>My targets</h2><p class="hint">Update progress and submit — your mentor reviews and approves.</p>
+      <table class="tbl"><thead><tr><th>Target</th><th>Approver</th><th>Progress</th><th>Status</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+}
+function renderTargetRow(t,canEdit){
+  const stCol={"Approved":"jade","Complete":"jade","In progress":"amber","Submitted for review":"blue","Returned":"rust","Not started":"grey"}[t.status]||"grey";
+  const locked=t.status==="Approved"||t.status==="Complete";
+  const canAct=canEdit&&ROLE==="employee"&&t.emp===ACTOR&&!locked&&isEditable("hipot.targets");
+  const btn=canAct?`<button class="btn sm" onclick="openUpdate('${t.id}')">Update</button>`:
+    (locked?'<span class="pill p-jade"><span class="ti ti-lock" style="font-size:12px"></span>locked</span>':"");
+  return `<tr>
+    <td><div style="font-weight:500">${t.title}</div><div style="font-size:11.5px;color:var(--t3)">${t.desc}</div></td>
+    <td><span class="pill p-grey">${t.approverRole}</span><div style="font-size:11px;color:var(--t3);margin-top:3px">${nm(t.approver)}</div></td>
+    <td style="min-width:120px">${bar(t.progress,t.progress>=80?"jade":t.progress>=40?"amber":"rust")}<div class="mono" style="font-size:11px;color:var(--t3);margin-top:3px">${t.progress}%</div></td>
+    <td><span class="pill p-${stCol}">${t.status}</span></td>
+    <td style="text-align:right">${btn}</td></tr>`;
+}
+function vSucc(){
+  // Direction 1: who succeeds ME
+  const bench=DB.succession.filter(s=>s.incumbent===ACTOR);
+  // Direction 2: roles I AM a successor for
+  const iSucceed=DB.succession.filter(s=>s.successor===ACTOR);
+
+  let out="";
+
+  // ---- Section A: successors for my role ----
+  if(isVisible("succ.mine")){
+  if(bench.length){
+    const ready=bench.filter(b=>/ready now/i.test(b.readiness)).length;
+    const cards=bench.map(b=>`<div style="border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:11px;background:#FBFBF9">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="who"><span class="av">${initials(nm(b.successor))}</span><div><div style="font-weight:600">${nm(b.successor)}</div><div style="font-size:12px;color:var(--t2)">${E(b.successor).desig} · rank ${b.rank}</div></div></div>
+        <span class="pill p-${rdColor(b.readiness)}">${b.readiness}</span></div>
+      <div style="margin-top:12px">${bar(RD_PC[b.readiness]||30,rdColor(b.readiness))}</div></div>`).join("");
+    out+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px">
+      <h2 style="margin:0">Successors for your role</h2><span class="pill ${ready?"p-jade":"p-amber"}">${ready?"Covered":"At risk"}</span></div>
+      <p class="hint">${ready?ready+" ready now.":"No ready-now successor."} ${bench.length} named for your ${E(ACTOR).desig} role.</p>${cards}</div>`;
+  }else{
+    out+=`<div class="card"><h2>Successors for your role</h2><p class="hint">Continuity planning for your seat.</p>
+      <div class="empty" style="padding:32px 20px"><div class="ei ti ti-user-question"></div><h3>No successor identified</h3><p>Nobody is named as a successor for your role — a continuity gap to raise with your manager.</p></div></div>`;
+  }
+  }
+
+  // ---- Section B: roles I am a successor FOR ----
+  if(isVisible("succ.iam")){
+  if(iSucceed.length){
+    const cards=iSucceed.map(s=>{
+      const inc=E(s.incumbent);
+      return `<div style="border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:11px;background:#FBFBF9">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <div><div style="font-weight:600">${s.role}</div>
+            <div style="font-size:12px;color:var(--t2)">Currently held by ${nm(s.incumbent)} · ${inc?inc.desig:""}</div></div>
+          <div style="text-align:right"><span class="pill p-violet">Successor · rank ${s.rank}</span>
+            <div style="margin-top:5px"><span class="pill p-${rdColor(s.readiness)}">${s.readiness}</span></div></div></div>
+        <div style="margin-top:12px">${bar(RD_PC[s.readiness]||30,rdColor(s.readiness))}</div></div>`;
+    }).join("");
+    out+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px">
+      <h2 style="margin:0">Roles you're a successor for</h2><span class="pill p-violet">${iSucceed.length}</span></div>
+      <p class="hint">You've been identified as a potential successor for ${iSucceed.length===1?"this role":"these roles"} — a signal of investment in your growth.</p>${cards}</div>`;
+  }else{
+    out+=`<div class="card"><h2>Roles you're a successor for</h2><p class="hint">Where you sit on someone else's bench.</p>
+      <div class="note">You're not currently named as a successor for any role. As your readiness grows, you may be added to a succession plan.</div></div>`;
+  }
+  }
+
+  return out || `<div class="empty"><div class="ei ti ti-eye-off"></div><h3>Nothing to show</h3><p>Succession sections are currently hidden by HR.</p></div>`;
+}
+function vAnalysis(){
+  const nb=DB.ninebox[ACTOR];
+  const showBox = DB.config.empSeeBox || false;
+  let boxCard="";
+  if(isVisible("analysis.ninebox")){
+    if(!showBox){
+      boxCard=`<div class="card"><h2>Nine-box placement</h2><p class="hint">Calibrated at the FY27 talent review.</p>
+        <div class="note">Your nine-box position isn't shown in your own view — this is an org policy set by HR. Your manager and leadership can see it.</div></div>`;
+    }else if(nb){
+      boxCard=`<div class="card"><h2>Nine-box placement</h2><p class="hint">You sit in <b>${nb.label}</b>.</p>${nineBox(nb)}</div>`;
+    }else{
+      boxCard=`<div class="card"><h2>Nine-box placement</h2><p class="hint">Calibrated at the FY27 talent review.</p><div class="note">No nine-box placement on record yet.</div></div>`;
+    }
+  }
+  const f=DB.f360[ACTOR];
+  const fCard=!isVisible("analysis.f360")?"":(f?`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px"><h2 style="margin:0">360 feedback</h2><span class="pill p-jade">Available</span></div>
+      <p class="hint">Reviewed with ${nm(f.mentor)}</p>
+      ${Object.entries(f.sc).map(([k,v])=>{const pc=v/5*100,c=v>=4.2?"jade":v>=3.6?"amber":"rust";return `<div class="kline"><div class="nm">${k}</div><div class="bar">${bar(pc,c)}</div><div class="pc mono">${v.toFixed(1)}</div></div>`;}).join("")}</div>`
+    :`<div class="card"><h2>360 feedback</h2><p class="hint">Not yet collected.</p><div class="note">No 360 report on record. You have not been assigned a 360 mentor.</div></div>`);
+  const certs=(DB.certs[ACTOR]||[]);
+  const certCard=!isVisible("analysis.certs")?"":`<div class="card"><h2>Certifications &amp; training</h2><p class="hint">Each linked to the competency it builds.</p>
+    ${certs.length?certs.map(c=>`<div class="kline"><div class="nm">${c.n}<small>builds: ${c.comp}</small></div><span class="pill ${c.st==="Completed"?"p-jade":"p-amber"}">${c.st}</span></div>`).join(""):'<div class="note">None on record.</div>'}</div>`;
+  const pr=(DB.projects[ACTOR]||[]);
+  const prCard=!isVisible("analysis.projects")?"":`<div class="card"><h2>Project feedback</h2><p class="hint">Signal from engagement leads.</p>
+    ${pr.map(p=>`<div class="kline"><div class="nm">${p.t}<small>${p.c}</small></div><span class="pill ${p.sig==="Strong"?"p-jade":p.sig==="Risk"?"p-rust":"p-amber"}">${p.sig}</span></div>`).join("")}</div>`;
+  const sw=DB.swot[ACTOR]||{s:[],w:[],o:[],t:[]};
+  const sq=(t,items,col,bg)=>`<div class="sq" style="background:${bg}"><h3 style="color:${col}">${t}</h3><ul>${items.map(i=>`<li style="color:var(--text)">${i}</li>`).join("")}</ul></div>`;
+  const swCard=!isVisible("analysis.swot")?"":`<div class="card"><h2>SWOT</h2><p class="hint">Synthesised from 360, projects and gaps.</p>
+    <div class="swot">${sq("Strengths",sw.s,"#0A5648","var(--jadebg)")}${sq("Weaknesses",sw.w,"#7A2B25","var(--rustbg)")}${sq("Opportunities",sw.o,"#7A4E06","var(--amberbg)")}${sq("Threats",sw.t,"#3F3376","var(--violetbg)")}</div></div>`;
+  const top=[boxCard,fCard].filter(Boolean).join("");
+  const mid=[certCard,prCard].filter(Boolean).join("");
+  const out=`${top?`<div class="grid2">${top}</div>`:""}${mid?`<div class="grid2">${mid}</div>`:""}${swCard}`;
+  return out||`<div class="empty"><div class="ei ti ti-eye-off"></div><h3>Nothing to show</h3><p>All analysis components are currently hidden by HR.</p></div>`;
+}
+function nineBox(nb){
+  const L=[["Under-performer","#F5F6F3"],["Effective","#F5F6F3"],["Trusted pro","var(--jadebg)"],
+           ["Inconsistent","#F5F6F3"],["Core contributor","var(--jadebg)"],["High potential","var(--violetbg)"],
+           ["Rising star","var(--amberbg)"],["Growth candidate","var(--violetbg)"],["Executive potential","var(--violetbg)"]];
+  let g=`<div class="axl">Potential</div>`;
+  for(let r=0;r<3;r++){for(let c=0;c<3;c++){
+    const idx=(2-r)*3+c,cell=L[idx],hit=(nb.pot===3-r&&nb.perf===c+1);
+    g+=`<div class="b9 ${hit?"hit":""}" style="background:${cell[1]}"><div class="t">${cell[0]}</div><div class="c">${hit?"you":""}</div></div>`;
+  }}
+  g+=`<div class="axb">Performance</div>`;
+  return `<div class="box9">${g}</div>`;
+}
+
+/* ============ REVIEW WORKFLOW (live) ============ */
+function openUpdate(tid){
+  const t=DB.targets.find(x=>x.id===tid);
+  document.getElementById("modalBody").innerHTML=`
+    <h3>Update progress</h3><div class="sub">${t.title}</div>
+    <label>Progress: <span id="pv" class="mono">${t.progress}%</span></label>
+    <input type="range" min="0" max="100" step="5" value="${t.progress}" id="pRange" oninput="document.getElementById('pv').textContent=this.value+'%'">
+    <label>Comment for your mentor</label>
+    <textarea id="pComment" rows="3" placeholder="What moved, what's blocking..."></textarea>
+    <div class="foot">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn pri" onclick="submitUpdate('${tid}')">Save &amp; submit for review</button>
+    </div>`;
+  document.getElementById("modalBg").classList.add("on");
+}
+function approvalsPaused(){ return DB.config.approvalsPaused===true; }
+function submitUpdate(tid){
+  if(approvalsPaused()){toast("Approvals are paused by HR — try again later");return;}
+  const t=DB.targets.find(x=>x.id===tid);
+  t.progress=+document.getElementById("pRange").value;
+  const cm=document.getElementById("pComment").value.trim();
+  t.status="Submitted for review";
+  t._lastComment=cm;
+  const pair=DB.pairings.find(p=>p.mentee===t.emp&&p.mentor===t.approver);
+  if(pair){(DB.interactions[pair.id]=DB.interactions[pair.id]||[]).push({d:new Date().toISOString().slice(0,10),by:t.emp,tt:"Progress submitted",tx:`${t.title} → ${t.progress}%. ${cm||"(no comment)"}`});}
+  closeModal();render();buildNav();toast("Submitted for review");
+}
+function reviewAction(tid,approve){
+  if(approvalsPaused()){toast("Approvals are paused by HR");return;}
+  const t=DB.targets.find(x=>x.id===tid);
+  const cm=(document.getElementById("rComment")?document.getElementById("rComment").value.trim():"");
+  t.status=approve?"Approved":"Returned";
+  const pair=DB.pairings.find(p=>p.mentee===t.emp&&p.mentor===t.approver);
+  if(pair){(DB.interactions[pair.id]=DB.interactions[pair.id]||[]).push({d:new Date().toISOString().slice(0,10),by:ACTOR,tt:approve?"Approved":"Returned with comments",tx:`${t.title}. ${cm||""}`});}
+  closeModal();render();buildNav();toast(approve?"Approved — record locked":"Returned to mentee");
+}
+function openReview(tid){
+  const t=DB.targets.find(x=>x.id===tid);
+  document.getElementById("modalBody").innerHTML=`
+    <h3>Review submission</h3><div class="sub">${nm(t.emp)} · ${t.title}</div>
+    <div class="note" style="margin-bottom:8px">Proposed progress: <b>${t.progress}%</b>${t._lastComment?`<br><span style="color:var(--t2)">"${t._lastComment}"</span>`:""}</div>
+    <label>Your comment</label>
+    <textarea id="rComment" rows="3" placeholder="Feedback, or what to fix if returning..."></textarea>
+    <div class="foot">
+      <button class="btn rust" onclick="reviewAction('${t.id}',false)">Return</button>
+      <button class="btn jade" onclick="reviewAction('${t.id}',true)">Approve</button>
+    </div>`;
+  document.getElementById("modalBg").classList.add("on");
+}
+function closeModal(){document.getElementById("modalBg").classList.remove("on");}
+
+/* ============ LEARNING PLAN ACTIONS (70:20:10) ============ */
+function laLog(eid,by,act,target,note){
+  const lp=DB.learningPlans[eid];if(!lp)return;
+  const ts=new Date().toISOString().slice(0,16).replace("T"," ");
+  // record who actually made the change: the logged-in person (mentor when editing a mentee), else the passed id
+  const actor=(typeof CURRENT_EMP!=="undefined"&&CURRENT_EMP&&!IS_ADMIN)?CURRENT_EMP:by;
+  lp.changelog.push({ts,by:actor,act,target,note});
+  if(lp.changelog.length>100) lp.changelog=lp.changelog.slice(-100); // keep last 100
+}
+function addLA(){laForm(null);}
+function editLA(id){laForm(id);}
+function laBandChanged(band){
+  const el=document.getElementById("laBandDesc");
+  if(el&&BANDS[band]) el.textContent=BANDS[band].desc;
+}
+function laForm(id){
+  const lp=DB.learningPlans[ACTOR];
+  const a = id ? lp.actions.find(x=>x.id===id) : {id:"",title:"",band:"70",timeline:{start:"",end:""},status:"Draft",update:""};
+  const opts=Object.entries(BANDS).map(([k,b])=>`<option value="${k}" ${a.band===k?"selected":""}>${b.label}</option>`).join("");
+  const STATUS_OPTS=["Not started","Ongoing","Achieved","Not relevant"];
+  const stOpts=`<option value="" ${!a.update?"selected":""} disabled>Select status…</option>`+
+    STATUS_OPTS.map(o=>`<option ${a.update===o?"selected":""}>${o}</option>`).join("");
+  document.getElementById("modalBody").innerHTML=`
+    <h3>${id?"Edit":"Add"} development action</h3>
+    <div class="sub">All fields are required. Timeline &amp; band changes route to your mentor.</div>
+    <label>Action <span class="req">*</span></label>
+    <input type="text" id="laTitle" value="${(a.title||"").replace(/"/g,'&quot;')}" placeholder="e.g. Take ownership of 2 client accounts">
+    <label>70:20:10 band <span class="req">*</span></label>
+    <select id="laBand" onchange="laBandChanged(this.value)" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">${opts}</select>
+    <div id="laBandDesc" class="note" style="margin-top:8px;font-size:12px">${BANDS[a.band].desc}</div>
+    <div style="display:flex;gap:12px">
+      <div style="flex:1"><label>Start date <span class="req">*</span></label><input type="date" id="laStart" value="${a.timeline.start||""}"></div>
+      <div style="flex:1"><label>End date <span class="req">*</span></label><input type="date" id="laEnd" value="${a.timeline.end||""}"></div>
+    </div>
+    <label>Status <span class="req">*</span></label>
+    <select id="laStatus" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">${stOpts}</select>
+    <label>Comment <span style="color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0">(optional — logged, no approval needed)</span></label>
+    <textarea id="laComment" rows="2" placeholder="Any note or context on this action...">${(a.comment||"").replace(/</g,"&lt;")}</textarea>
+    <div class="lberr" id="laErr"></div>
+    <div class="foot">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn pri" onclick="saveLA('${id||""}')">Save</button>
+    </div>`;
+  document.getElementById("modalBg").classList.add("on");
+}
+function saveLA(id){
+  const lp=DB.learningPlans[ACTOR];
+  const title=document.getElementById("laTitle").value.trim();
+  const band=document.getElementById("laBand").value;
+  const start=document.getElementById("laStart").value;
+  const end=document.getElementById("laEnd").value;
+  const statusUpd=document.getElementById("laStatus").value.trim();
+  const comment=(document.getElementById("laComment")?document.getElementById("laComment").value.trim():"");
+  // all fields mandatory
+  const missing=[];
+  if(!title) missing.push("Action");
+  if(!band) missing.push("70:20:10 band");
+  if(!start) missing.push("Start date");
+  if(!end) missing.push("End date");
+  if(!statusUpd) missing.push("Status");
+  if(start&&end&&end<start) missing.push("End date must be after start date");
+  if(missing.length){
+    const el=document.getElementById("laErr");
+    if(el) el.textContent="Please complete: "+missing.join(", ");
+    return;
+  }
+  const editorIsMentor = ROLE==="mentor";
+  if(id){
+    const a=lp.actions.find(x=>x.id===id);
+    // did the approval-relevant fields change?
+    const changed = a.title!==title || a.band!==band || (a.timeline.start||"")!==start || (a.timeline.end||"")!==end;
+    const statusChanged = (a.update||"")!==statusUpd;
+    const commentChanged = (a.comment||"")!==comment;
+    a.title=title;a.band=band;a.timeline={start,end};a.comment=comment;
+    if(statusChanged){ a.update=statusUpd; laLog(ACTOR, ACTOR, "status update", id, statusUpd?`Status: "${statusUpd}"`:"Cleared status update"); }
+    if(commentChanged){ laLog(ACTOR, ACTOR, "comment", id, comment?`Comment: "${comment}"`:"Cleared comment"); }
+    if(changed){
+      if(approvalsPaused() && !editorIsMentor){
+        // approvals frozen: keep prior status, don't route to Pending
+        laLog(ACTOR, ACTOR, "edited", id, `Updated action while approvals paused; not routed. band ${band}; ${start||"?"}→${end||"?"}`);
+        closeModal();render();buildNav();
+        toast("Saved — approvals are paused, so this wasn't sent for review");
+        return;
+      }
+      // approval-relevant edit -> re-route for approval (status alone does NOT)
+      a.status = editorIsMentor ? "Approved" : "Pending";
+      laLog(ACTOR, ACTOR, editorIsMentor?"edited+approved":"edited", id, `Updated action; band ${band}; ${start||"?"}→${end||"?"}`);
+    }
+    closeModal();render();buildNav();
+    toast(changed ? (editorIsMentor?"Saved & approved":"Saved — sent to mentor for approval") : (statusChanged?"Status updated & logged":"No changes"));
+  }else{
+    if(approvalsPaused() && !editorIsMentor){
+      lp.actions.push({id:"LA-"+(lp.actions.length+1+Math.floor(Math.random()*90)),title,band,timeline:{start,end},update:statusUpd,comment,status:"Draft"});
+      laLog(ACTOR, ACTOR, "created", lp.actions[lp.actions.length-1].id, `Added action while approvals paused; kept as draft`);
+      closeModal();render();buildNav();
+      toast("Saved as draft — approvals are paused");
+      return;
+    }
+    const newId="LA-"+(lp.actions.length+1+Math.floor(Math.random()*90));
+    lp.actions.push({id:newId,title,band,timeline:{start,end},update:statusUpd,comment,status:editorIsMentor?"Approved":"Pending"});
+    laLog(ACTOR, ACTOR, "created", newId, `Added action; band ${band}`);
+    if(statusUpd) laLog(ACTOR, ACTOR, "status update", newId, `Status: "${statusUpd}"`);
+    if(comment) laLog(ACTOR, ACTOR, "comment", newId, `Comment: "${comment}"`);
+    closeModal();render();buildNav();
+    toast(editorIsMentor?"Saved & approved":"Saved — sent to mentor for approval");
+  }
+}
+function approveLA(eid,id,ok){
+  if(approvalsPaused()){toast("Approvals are paused by HR");return;}
+  const lp=DB.learningPlans[eid];const a=lp.actions.find(x=>x.id===id);
+  a.status=ok?"Approved":"Draft";
+  laLog(eid, ACTOR, ok?"approved":"returned", id, ok?"Approved":"Returned for revision");
+  closeModal();render();buildNav();toast(ok?"Action approved":"Returned to mentee");
+}
+function showLog(){
+  const lp=DB.learningPlans[ACTOR];
+  const log=(lp?lp.changelog:[]).slice().reverse();
+  document.getElementById("modalBody").innerHTML=`
+    <h3>Change &amp; approval log</h3><div class="sub">Every edit, trigger and approval on this learning plan.</div>
+    ${log.length?`<ul class="timeline" style="margin-top:10px">${log.map(x=>{
+      const icon={created:"ti-plus",edited:"ti-pencil","edited+approved":"ti-check",approved:"ti-check",returned:"ti-arrow-back-up"}[x.act]||"ti-point";
+      return `<li><div class="tt"><span class="ti ${icon}" style="font-size:13px;vertical-align:-1px"></span> ${x.act} · ${x.target} <span style="color:var(--t3);font-weight:400">by ${nm(x.by)}</span></div><div class="td">${x.ts}</div><div class="tx">${x.note}</div></li>`;
+    }).join("")}</ul>`:'<div class="note">No changes logged yet.</div>'}
+    <div class="foot"><button class="btn" onclick="closeModal()">Close</button></div>`;
+  document.getElementById("modalBg").classList.add("on");
+}
+document.getElementById("modalBg").addEventListener("click",e=>{if(e.target.id==="modalBg")closeModal();});
+</script>
+<script>
+/* ============ MENTOR VIEWS ============ */
+function vQueue(){
+  const paused=DB.config.approvalsPaused===true;
+  const q=reviewQueueFor(ACTOR);
+  if(!q.length) return `<div class="empty"><div class="ei ti ti-inbox"></div><h3>Nothing awaiting review</h3><p>When a mentee submits a progress update, it lands here for your approval.</p></div>`;
+  const banner = paused ? `<div class="note warn" style="margin-bottom:14px"><span class="ti ti-player-pause" style="font-size:14px"></span> Approvals are currently <b>paused by HR</b>. You can view submissions, but approve/return is disabled until approvals resume.</div>` : "";
+  const rows=q.map(t=>`<tr>
+    <td><div class="who"><span class="av">${initials(nm(t.emp))}</span><div><div style="font-weight:500">${nm(t.emp)}</div><div style="font-size:11.5px;color:var(--t3)">${E(t.emp).desig}</div></div></div></td>
+    <td><div style="font-weight:500">${t.title}</div><div style="font-size:11.5px;color:var(--t3)">${t.type} · approver: ${t.approverRole}</div></td>
+    <td>${bar(t.progress,t.progress>=80?"jade":t.progress>=40?"amber":"rust")}<div class="mono" style="font-size:11px;color:var(--t3);margin-top:3px">${t.progress}%</div></td>
+    <td style="text-align:right"><button class="btn sm pri" ${paused?"disabled":""} onclick="openReview('${t.id}')">Review</button></td></tr>`).join("");
+  return `${banner}<div class="card"><h2>Pending approvals <span class="badge-n">${q.length}</span></h2><p class="hint">Each submission is a versioned progress update. Approve to lock it, or return with comments.</p>
+    <table class="tbl"><thead><tr><th>Mentee</th><th>Target</th><th>Proposed</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function vMentees(){
+  const ms=menteesOf(ACTOR);
+  if(!ms.length) return `<div class="empty"><div class="ei ti ti-users"></div><h3>No mentees</h3><p>You aren't currently paired with anyone.</p></div>`;
+  const seen={};const uniq=ms.map(p=>p.mentee).filter(id=>!seen[id]&&(seen[id]=1));
+  const rdOpts=(cur)=>READINESS_OPTIONS.map(o=>`<option ${cur===o?"selected":""}>${o}</option>`).join("");
+  const rows=uniq.map(eid=>{
+    const cp=curPath(eid);
+    const hp=E(eid).hipot?'<span class="pill p-violet">Y</span>':'<span class="pill p-grey">N</span>';
+    const readSel=cp?`<select onchange="mentorSetReadiness('${eid}',this.value)" style="font-family:inherit;font-size:12.5px;padding:5px 8px;border:1px solid var(--line2);border-radius:7px">${rdOpts(cp.readiness)}</select>`:'<span style="color:var(--t3)">—</span>';
+    return `<tr>
+      <td><div class="who"><span class="av">${initials(nm(eid))}</span><div><div style="font-weight:500">${nm(eid)}</div><div style="font-size:11.5px;color:var(--t3)">${E(eid).fn}</div></div></div></td>
+      <td>${hp}</td>
+      <td style="font-size:13px">${E(eid).desig}</td>
+      <td style="font-size:13px">${cp?cp.next:'<span style="color:var(--t3)">—</span>'}</td>
+      <td><button class="btn sm pri" onclick="openMenteeLearning('${eid}')"><span class="ti ti-edit" style="font-size:13px"></span>Edit learning plan</button></td>
+      <td>${readSel}</td></tr>`;
+  }).join("");
+  return `<div class="card"><h2>My mentees</h2><p class="hint">Open a mentee's learning page to view and edit their development plan. Changes are visible to the mentee and logged.</p>
+    <table class="tbl"><thead><tr><th>Mentee</th><th>HiPot</th><th>Current role</th><th>Next role</th><th>Learning</th><th>Readiness</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+/* mentor edits mentee readiness inline -> reflected to mentee + logged */
+function mentorSetReadiness(eid,val){
+  const cp=curPath(eid); if(!cp) return;
+  cp.readiness=val;
+  laLog(eid, ACTOR, "readiness set", "career", `Mentor set readiness to "${val}"`);
+  toast("Readiness updated & logged");
+}
+/* open the mentee's full My Learning page in-place, as the mentor (editable) */
+let _mentorReturn=null;
+function openMenteeLearning(eid){
+  _mentorReturn={role:ROLE,actor:ACTOR,tab:TAB};
+  ACTOR=eid; TAB="learning";
+  // keep ROLE as mentor so canEdit for learning.actions applies (mentor is an editor of their mentee)
+  document.getElementById("pgTitle").textContent="Mentee learning plan — "+nm(eid);
+  document.getElementById("pgSub").textContent="You're editing as mentor. Changes are visible to the mentee and logged.";
+  document.getElementById("viewHost").innerHTML=`<div class="view on">
+    <div class="note" style="margin-bottom:14px"><span class="ti ti-user-edit" style="font-size:14px"></span> Editing <b>${nm(eid)}</b>'s learning plan as their mentor. <a href="#" onclick="closeMenteeLearning();return false" style="color:var(--jade);font-weight:500">← Back to My mentees</a></div>
+    ${vLearning()}</div>`;
+}
+function closeMenteeLearning(){
+  if(_mentorReturn){ROLE=_mentorReturn.role;ACTOR=_mentorReturn.actor;TAB=_mentorReturn.tab;_mentorReturn=null;}
+  buildNav();render();
+}
+function peekMentee(eid){
+  const ts=targetsOf(eid).filter(t=>t.approver===ACTOR);
+  const c=curPath(eid);
+  const lp=DB.learningPlans[eid];
+  const pendingLA=(lp&&lp.mentor===ACTOR)?lp.actions.filter(a=>a.status==="Pending"):[];
+  const laBlock = pendingLA.length ? `<label style="margin-top:14px">Learning-plan actions awaiting your approval</label>
+    ${pendingLA.map(a=>`<div style="border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-weight:500;font-size:13px">${a.title}</div>
+      <div style="font-size:11.5px;color:var(--t3);margin:3px 0 8px">${(BANDS[a.band]||{}).short||a.band} · ${a.timeline.start||"?"} → ${a.timeline.end||"?"}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn sm rust" onclick="approveLA('${eid}','${a.id}',false)">Return</button>
+        <button class="btn sm jade" onclick="approveLA('${eid}','${a.id}',true)">Approve</button>
+      </div></div>`).join("")}` : "";
+  document.getElementById("modalBody").innerHTML=`
+    <h3>${nm(eid)}</h3><div class="sub">${E(eid).desig} · ${E(eid).fn}${E(eid).hipot?" · HiPot":""}</div>
+    ${c?`<div class="note" style="margin-bottom:12px">Next role: <b>${c.next}</b> · ${c.readiness}</div>`:'<div class="note" style="margin-bottom:12px">No career plan on record.</div>'}
+    <label style="margin-top:0">Targets you approve</label>
+    ${ts.map(t=>`<div class="kline"><div class="nm">${t.title}<small>${t.status}</small></div><div class="bar">${bar(t.progress,t.progress>=80?"jade":t.progress>=40?"amber":"rust")}</div><div class="pc mono">${t.progress}%</div></div>`).join("")||'<div class="note">None.</div>'}
+    ${laBlock}
+    <div class="foot"><button class="btn" onclick="closeModal()">Close</button></div>`;
+  document.getElementById("modalBg").classList.add("on");
+}
+function vInteractions(){
+  const ms=menteesOf(ACTOR);
+  const blocks=ms.map(p=>{
+    const log=(DB.interactions[p.id]||[]).slice().reverse();
+    return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+      <div class="who"><span class="av">${initials(nm(p.mentee))}</span><div><div style="font-weight:600">${nm(p.mentee)}</div><div style="font-size:11.5px;color:var(--t3)">${p.type} pairing</div></div></div>
+      ${isEditable("interactions")?`<button class="btn sm" onclick="addNote('${p.id}')"><span class="ti ti-plus" style="font-size:13px"></span>Add note</button>`:""}</div>
+      ${log.length?`<ul class="timeline">${log.map(x=>`<li><div class="tt">${x.tt} <span style="color:var(--t3);font-weight:400">· ${nm(x.by)}</span></div><div class="td">${x.d}</div><div class="tx">${x.tx}</div></li>`).join("")}</ul>`:'<div class="note">No interactions logged yet.</div>'}</div>`;
+  }).join("");
+  return blocks||`<div class="empty"><div class="ei ti ti-messages"></div><h3>No mentees</h3><p>Interaction history appears here per mentee.</p></div>`;
+}
+function addNote(pid){
+  document.getElementById("modalBody").innerHTML=`
+    <h3>Add interaction note</h3><div class="sub">${nm(DB.pairings.find(p=>p.id===pid).mentee)}</div>
+    <label>Title</label><input type="text" id="nTitle" placeholder="1:1 session">
+    <label>Note</label><textarea id="nBody" rows="3" placeholder="What you discussed, decisions, next steps..."></textarea>
+    <div class="foot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn pri" onclick="saveNote('${pid}')">Log note</button></div>`;
+  document.getElementById("modalBg").classList.add("on");
+}
+function saveNote(pid){
+  const tt=document.getElementById("nTitle").value.trim()||"Note";
+  const tx=document.getElementById("nBody").value.trim();
+  (DB.interactions[pid]=DB.interactions[pid]||[]).push({d:new Date().toISOString().slice(0,10),by:ACTOR,tt,tx:tx||"—"});
+  closeModal();render();toast("Note logged");
+}
+
+/* ============ LEADERSHIP VIEWS (scoped) ============ */
+function scopedPeople(){
+  const g=DB.grants[ACTOR];if(!g)return [];
+  let ids=g.tree?subtree(ACTOR):Object.keys(DB.employees);
+  return ids.map(E).filter(e=>e&&e.id!==ACTOR&&e.lvl>0)
+    .filter(e=>g.fnScope==="All"||e.fn===g.fnScope)
+    .filter(e=>e.lvl>=(g.minLvl||0));
+}
+function vOverview(){
+  const p=scopedPeople();
+  const hipots=p.filter(e=>e.hipot);
+  const mgrsAbove=p.filter(e=>e.lvl>=6);
+  const withSucc=mgrsAbove.filter(e=>DB.succession.some(s=>s.incumbent===e.id));
+  const pendingReviews=DB.targets.filter(t=>t.status==="Submitted for review"&&p.some(e=>e.id===t.emp)).length;
+  const g=DB.grants[ACTOR];
+  return `<div class="note" style="margin-bottom:15px"><span class="ti ti-eye" style="font-size:14px"></span> Scope: <b>${g.fnScope}</b> function, level ${g.minLvl}+, ${g.tree?"your reporting tree":"org-wide"}. You see ${p.length} people.</div>
+    <div class="kpis">
+      <div class="kpi"><div class="l">People in scope</div><div class="v mono">${p.length}</div></div>
+      <div class="kpi"><div class="l">HiPots</div><div class="v mono">${hipots.length}</div><div class="s">${Math.round(hipots.length/p.length*100)||0}% of scope</div></div>
+      <div class="kpi"><div class="l">Mgrs+ with successor</div><div class="v mono">${withSucc.length}/${mgrsAbove.length}</div><div class="s">${mgrsAbove.length-withSucc.length} gaps</div></div>
+      <div class="kpi"><div class="l">Pending reviews</div><div class="v mono">${pendingReviews}</div><div class="s">awaiting mentor sign-off</div></div>
+    </div>
+    <div class="card"><h2>People in scope</h2><p class="hint">Read-only. Click through the other tabs for detail.</p>
+    <table class="tbl"><thead><tr><th>Person</th><th>Function</th><th>Level</th><th>HiPot</th><th>9-box</th></tr></thead><tbody>
+    ${p.map(e=>{const nb=DB.ninebox[e.id];return `<tr><td><div class="who"><span class="av">${initials(e.name)}</span><div><div style="font-weight:500">${e.name}</div><div style="font-size:11.5px;color:var(--t3)">${e.desig}</div></div></div></td>
+      <td>${e.fn}</td><td class="mono">L${e.lvl}</td><td>${e.hipot?'<span class="pill p-violet">Yes</span>':'<span class="pill p-grey">—</span>'}</td>
+      <td>${nb?`<span style="font-size:12.5px">${nb.label}</span>`:'<span style="color:var(--t3)">—</span>'}</td></tr>`;}).join("")}
+    </tbody></table></div>`;
+}
+function vHipots(){
+  const p=scopedPeople().filter(e=>e.hipot);
+  if(!p.length)return `<div class="empty"><div class="ei ti ti-rocket"></div><h3>No HiPots in scope</h3></div>`;
+  return `<div class="card"><h2>HiPots in your scope <span class="pill p-violet">${p.length}</span></h2><p class="hint">Each with their live targets and readiness.</p>
+    <table class="tbl"><thead><tr><th>Person</th><th>Category</th><th>Next role</th><th>Readiness</th><th>Targets</th></tr></thead><tbody>
+    ${p.map(e=>{const c=curPath(e.id);const ts=targetsOf(e.id).filter(t=>t.type==="HiPot");const done=ts.filter(t=>t.status==="Approved").length;
+      return `<tr><td><div class="who"><span class="av">${initials(e.name)}</span><div><div style="font-weight:500">${e.name}</div><div style="font-size:11.5px;color:var(--t3)">${e.desig}</div></div></div></td>
+      <td><span class="pill p-violet">${e.hcat}</span></td><td>${c?c.next:"—"}</td>
+      <td>${c?`<span class="pill p-${rdColor(c.readiness)}">${c.readiness}</span>`:"—"}</td>
+      <td class="mono" style="font-size:12.5px">${done}/${ts.length} approved</td></tr>`;}).join("")}
+    </tbody></table></div>`;
+}
+function vSuccMap(){
+  const p=scopedPeople().filter(e=>e.lvl>=6);
+  const rows=p.map(e=>{
+    const bench=DB.succession.filter(s=>s.incumbent===e.id);
+    const ready=bench.filter(b=>/ready now/i.test(b.readiness)).length;
+    const health=!bench.length?["p-rust","No cover"]:ready?["p-jade","Covered"]:["p-amber","Building"];
+    return `<tr><td><div class="who"><span class="av">${initials(e.name)}</span><div><div style="font-weight:500">${e.name}</div><div style="font-size:11.5px;color:var(--t3)">${e.desig}</div></div></div></td>
+      <td>${bench.length}</td>
+      <td>${bench.map(b=>`<span class="pill p-${rdColor(b.readiness)}" style="margin:2px 3px 2px 0">${nm(b.successor)} · ${b.readiness}</span>`).join("")||'<span style="color:var(--t3)">none</span>'}</td>
+      <td><span class="pill ${health[0]}">${health[1]}</span></td></tr>`;
+  }).join("");
+  const gaps=p.filter(e=>!DB.succession.some(s=>s.incumbent===e.id)).length;
+  return `${gaps?`<div class="note warn" style="margin-bottom:14px"><span class="ti ti-alert-triangle" style="font-size:14px"></span> ${gaps} manager-and-above role(s) in scope have no named successor — a continuity risk.</div>`:""}
+    <div class="card"><h2>Succession coverage</h2><p class="hint">Managers and above in your scope. Readiness shown per successor.</p>
+    <table class="tbl"><thead><tr><th>Incumbent</th><th>Bench</th><th>Successors</th><th>Health</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function vNextRoles(){
+  const p=scopedPeople();
+  const rows=p.map(e=>{const c=curPath(e.id);
+    return `<tr><td><div class="who"><span class="av">${initials(e.name)}</span><div><div style="font-weight:500">${e.name}</div><div style="font-size:11.5px;color:var(--t3)">${e.desig}</div></div></div></td>
+    <td>${c?c.next:'<span style="color:var(--t3)">no plan on record</span>'}</td>
+    <td>${c?`<span class="pill p-${rdColor(c.readiness)}">${c.readiness}</span>`:"—"}</td>
+    <td style="font-size:12.5px;color:var(--t2)">${c?c.milestone:"—"}</td></tr>`;}).join("");
+  return `<div class="card"><h2>Where your team is heading</h2><p class="hint">Next role and readiness for everyone in scope.</p>
+    <table class="tbl"><thead><tr><th>Person</th><th>Next role</th><th>Readiness</th><th>Milestone</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+/* ============ HR ADMIN VIEWS ============ */
+function vConfig(){
+  const c=DB.config;
+  const row=(key,label,opts,help)=>`<div class="kline"><div class="nm">${label}<small>${help}</small></div>
+    <select onchange="DB.config.${key}=this.value;toast('Policy updated');render();" style="font-family:inherit;font-size:13px;padding:6px 9px;border:1px solid var(--line2);border-radius:7px">
+    ${opts.map(o=>`<option ${c[key]===o?"selected":""}>${o}</option>`).join("")}</select></div>`;
+  // boolean toggle row (Enabled/Disabled -> true/false)
+  const boolRow=(key,label,help)=>`<div class="kline"><div class="nm">${label}<small>${help}</small></div>
+    <label class="switch"><input type="checkbox" ${c[key]!==false?"checked":""} onchange="DB.config.${key}=this.checked;toast(this.checked?'Enabled':'Disabled');render();"><span class="track"></span></label>
+    <div style="width:64px;text-align:right"><span class="pill ${c[key]!==false?"p-jade":"p-grey"}">${c[key]!==false?"On":"Off"}</span></div></div>`;
+  // positive-boolean toggle: checked = true (used for "paused" where true is the active state)
+  const boolRow2=(key,label,help)=>`<div class="kline"><div class="nm">${label}<small>${help}</small></div>
+    <label class="switch"><input type="checkbox" ${c[key]===true?"checked":""} onchange="DB.config.${key}=this.checked;toast(this.checked?'Approvals paused':'Approvals resumed');render();buildNav();"><span class="track"></span></label>
+    <div style="width:74px;text-align:right"><span class="pill ${c[key]===true?"p-amber":"p-grey"}">${c[key]===true?"Paused":"Active"}</span></div></div>`;
+  return `<div class="card"><h2>Org-wide talent policy</h2><p class="hint">The decisions the audit said to make deliberately. Changing "employees see own 9-box" updates the employee Analysis view live.</p>
+    ${boolRow("careerPathSelectable","Career-path selection","When off, employees can't choose or edit their career path — it's fixed by HR")}
+    ${boolRow2("approvalsPaused","Pause all mentor approvals","When on, all submit-for-review / approve actions are frozen org-wide")}
+    ${row("hipotDef","HiPot definition",["Independent","Derived"],"Independent = committee sets it; Derived = from 9-box")}
+    ${row("empSeeBox","Employees see own 9-box",["true","false"].map(x=>x),"Culture decision")}
+    ${row("empSeeHipot","Employees see own HiPot status",["true","false"],"Whether people are told")}
+    ${row("menteeSeeNotes","Mentee sees mentor notes",["true","false"],"Private vs shared notes")}
+    ${row("readinessSrc","Readiness source",["Manual","Computed"],"Manual sheet vs competency engine")}
+    ${row("defaultApprover","Default approver",["Line Manager","Mentor","HR"],"Fallback when a target has none")}
+  </div>
+  <div class="note">Note: <b>Career-path selection</b> is wired live — turn it off, then open Employee → My Career path to see the path locked and Edit buttons hidden.</div>`;
+}
+function vMaster(){
+  const list=Object.values(DB.employees).filter(e=>e.id!=="E-0001");
+  const rows=list.map(e=>`<tr>
+    <td><div class="who"><span class="av">${initials(e.name)}</span><div><div style="font-weight:500">${e.name}</div><div style="font-size:11px;color:var(--t3)">${e.id}</div></div></div></td>
+    <td style="font-size:13px">${e.desig}</td>
+    <td style="font-size:13px">${e.fn}${e.sub&&e.sub!==e.fn?" · "+e.sub:""}</td>
+    <td class="mono" style="font-size:12px">L${e.lvl}</td>
+    <td style="font-size:12.5px">${e.mgr?nm(e.mgr):'<span style="color:var(--t3)">—</span>'}</td>
+    <td>${e.hipot?'<span class="pill p-violet">Y</span>':'<span class="pill p-grey">N</span>'}</td>
+    <td style="text-align:right;white-space:nowrap"><button class="btn sm" onclick="editEmp('${e.id}')">Edit</button> <button class="btn sm rust" onclick="quickDeleteEmp('${e.id}')">Delete</button></td></tr>`).join("");
+  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+      <h2 style="margin:0">Employee master data</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn sm" onclick="bulkAddEmp()"><span class="ti ti-file-upload" style="font-size:13px"></span>Bulk add</button>
+        <button class="btn sm pri" onclick="editEmp('')"><span class="ti ti-plus" style="font-size:13px"></span>Add employee</button>
+      </div></div>
+    <p class="hint">${list.length} people. This is the master record every other module joins to by Employee ID.</p>
+    <table class="tbl"><thead><tr><th>Name</th><th>Designation</th><th>Function</th><th>Level</th><th>Manager</th><th>HiPot</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="note">Changing someone's name, level or HiPot flag here updates them everywhere in the app instantly, because every module reads from this master.</div>`;
+}
+function editEmp(id){
+  const e = id ? DB.employees[id] : {id:"",name:"",fn:"Delivery",sub:"",desig:"",lvl:1,mgr:"",hipot:false,hcat:"",loc:""};
+  const mgrOpts=`<option value="">— none —</option>`+Object.values(DB.employees).filter(x=>x.id!==id&&x.id!=="E-0001").map(x=>`<option value="${x.id}" ${e.mgr===x.id?"selected":""}>${x.name} — ${x.desig}</option>`).join("");
+  const fnOpts=["Delivery","Growth","Enabling","HR"].map(o=>`<option ${e.fn===o?"selected":""}>${o}</option>`).join("");
+  document.getElementById("modalBody").innerHTML=`
+    <h3>${id?"Edit":"Add"} employee</h3><div class="sub">${id?e.id:"A new Employee ID will be generated."}</div>
+    <label>Full name <span class="req">*</span></label>
+    <input type="text" id="emName" value="${(e.name||"").replace(/"/g,'&quot;')}" placeholder="Full name">
+    <div style="display:flex;gap:12px">
+      <div style="flex:1"><label>Designation <span class="req">*</span></label><input type="text" id="emDesig" value="${(e.desig||"").replace(/"/g,'&quot;')}" placeholder="e.g. Senior Manager"></div>
+      <div style="flex:0 0 92px"><label>Level <span class="req">*</span></label><input type="number" id="emLvl" min="0" max="14" value="${e.lvl}"></div>
+    </div>
+    <div style="display:flex;gap:12px">
+      <div style="flex:1"><label>Function</label><select id="emFn" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">${fnOpts}</select></div>
+      <div style="flex:1"><label>Sub-function</label><input type="text" id="emSub" value="${(e.sub||"").replace(/"/g,'&quot;')}" placeholder="e.g. Project Management"></div>
+    </div>
+    <label>Manager</label>
+    <select id="emMgr" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">${mgrOpts}</select>
+    <div style="display:flex;gap:12px">
+      <div style="flex:1"><label>Location</label><input type="text" id="emLoc" value="${(e.loc||"").replace(/"/g,'&quot;')}" placeholder="City"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:14px"><input type="checkbox" id="emHipot" ${e.hipot?"checked":""}> Flagged as HiPot</label>
+    <div class="lberr" id="emErr"></div>
+    <div class="foot">
+      ${id?`<button class="btn rust" style="margin-right:auto" onclick="deleteEmp('${id}')">Delete</button>`:""}
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn pri" onclick="saveEmp('${id||""}')">Save</button></div>`;
+  document.getElementById("modalBg").classList.add("on");
+}
+function saveEmp(id){
+  const name=document.getElementById("emName").value.trim();
+  const desig=document.getElementById("emDesig").value.trim();
+  const lvl=+document.getElementById("emLvl").value;
+  if(!name||!desig){document.getElementById("emErr").textContent="Name and designation are required.";return;}
+  const fn=document.getElementById("emFn").value;
+  const sub=document.getElementById("emSub").value.trim()||fn;
+  const mgr=document.getElementById("emMgr").value||null;
+  const loc=document.getElementById("emLoc").value.trim();
+  const hipot=document.getElementById("emHipot").checked;
+  if(id){
+    const e=DB.employees[id];
+    Object.assign(e,{name,desig,lvl,fn,sub,mgr,loc,hipot,hcat:hipot?(e.hcat||"—"):""});
+  }else{
+    // generate a new Employee ID
+    let n=5100; while(DB.employees["E-"+n]) n++;
+    const newId="E-"+n;
+    DB.employees[newId]={id:newId,name,fn,sub,desig,lvl,mgr,hipot,hcat:hipot?"—":"",loc};
+  }
+  closeModal();render();toast(id?"Employee updated":"Employee added");
+}
+function deleteEmp(id){
+  // guard: don't delete someone still referenced as a manager/mentor/etc.
+  const refs=[];
+  Object.values(DB.employees).forEach(e=>{if(e.mgr===id)refs.push(e.name+" (reports to them)");});
+  DB.pairings.forEach(p=>{if(p.mentor===id||p.mentee===id)refs.push("a mentoring pairing");});
+  if(refs.length){toast("Can't delete — still referenced by "+refs.length+" record(s)");return;}
+  delete DB.employees[id];
+  closeModal();render();toast("Employee removed");
+}
+function quickDeleteEmp(id){
+  const refs=[];
+  Object.values(DB.employees).forEach(e=>{if(e.mgr===id)refs.push(e.name);});
+  DB.pairings.forEach(p=>{if(p.mentor===id||p.mentee===id)refs.push("pairing");});
+  if(refs.length){toast("Can't delete — still referenced by "+refs.length+" record(s)");return;}
+  delete DB.employees[id];render();toast("Employee removed");
+}
+function bulkAddEmp(){
+  document.getElementById("modalBody").innerHTML=`
+    <h3>Bulk add employees</h3>
+    <div class="sub">Upload a filled copy of the Employee bulk-upload template (.xlsx).</div>
+    <div class="note" style="margin-bottom:12px;font-size:12px">
+      The template's <b>Employees</b> sheet has these columns:<br>
+      <span class="mono">Full Name*, Designation*, Level*, Function, Sub-Function, Manager Employee ID, Location, HiPot (Y/N)</span><br>
+      Starred columns are required. New Employee IDs are generated on import.
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+      <button class="btn sm" onclick="downloadEmpTemplate()"><span class="ti ti-download" style="font-size:13px"></span>Download template</button>
+      <label class="btn sm pri" style="cursor:pointer;margin:0"><span class="ti ti-file-upload" style="font-size:13px"></span>Choose .xlsx file
+        <input type="file" id="bulkFile" accept=".xlsx,.xls" style="display:none" onchange="parseBulkFile(event)">
+      </label>
+    </div>
+    <div id="bulkPreview"></div>
+    <div class="lberr" id="bulkErr"></div>
+    <div class="foot">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn pri" id="bulkCommitBtn" onclick="commitBulk()" disabled>Import</button>
+    </div>`;
+  document.getElementById("modalBg").classList.add("on");
+}
+let _bulkParsed=[];
+function downloadEmpTemplate(){
+  // build the template in-browser via SheetJS so it always matches the importer
+  if(typeof XLSX==="undefined"){toast("Spreadsheet library still loading — try again");return;}
+  const headers=["Full Name*","Designation*","Level*","Function","Sub-Function","Manager Employee ID","Location","HiPot (Y/N)"];
+  const sample=[
+    ["Priya Nair","Senior Associate",3,"Enabling","Human Resources","E-5101","Gurugram","N"],
+    ["Arjun Rao","Associate Lead",4,"Enabling","Finance","E-5104","Gurugram","Y"]
+  ];
+  const ws=XLSX.utils.aoa_to_sheet([headers,...sample]);
+  ws["!cols"]=headers.map(h=>({wch:Math.max(12,h.length+2)}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Employees");
+  XLSX.writeFile(wb,"Employee_Bulk_Upload_Template.xlsx");
+}
+function parseBulkFile(ev){
+  const file=ev.target.files&&ev.target.files[0]; if(!file) return;
+  const err=document.getElementById("bulkErr"); err.textContent="";
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
+      const sheet=wb.Sheets["Employees"]||wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(sheet,{header:1,blankrows:false});
+      if(!rows.length){err.textContent="The sheet looks empty.";return;}
+      // find header row (first row containing 'Name')
+      let hi=rows.findIndex(r=>r.some(c=>String(c||"").toLowerCase().includes("name")));
+      if(hi<0)hi=0;
+      const dataRows=rows.slice(hi+1);
+      const parsed=[], errs=[];
+      dataRows.forEach((r,i)=>{
+        const name=String(r[0]||"").trim();
+        const desig=String(r[1]||"").trim();
+        const lvlRaw=r[2];
+        if(!name&&!desig&&(lvlRaw===undefined||lvlRaw==="")) return; // skip blank line
+        const lineNo=hi+2+i;
+        if(!name||!desig||lvlRaw===undefined||lvlRaw===""){errs.push(`Row ${lineNo}: need Name, Designation, Level`);return;}
+        const lvl=parseInt(lvlRaw,10);
+        if(isNaN(lvl)){errs.push(`Row ${lineNo}: level "${lvlRaw}" isn't a number`);return;}
+        const fn=String(r[3]||"Delivery").trim()||"Delivery";
+        const sub=String(r[4]||"").trim()||fn;
+        const mgr=String(r[5]||"").trim();
+        if(mgr && !DB.employees[mgr]){errs.push(`Row ${lineNo}: manager ID "${mgr}" not found`);return;}
+        const loc=String(r[6]||"").trim();
+        const hipot=/^y/i.test(String(r[7]||"").trim());
+        parsed.push({name,desig,lvl,fn,sub,mgr:mgr||null,loc,hipot});
+      });
+      _bulkParsed=parsed;
+      const prev=document.getElementById("bulkPreview");
+      if(errs.length){
+        err.innerHTML=errs.slice(0,8).join("<br>");
+        prev.innerHTML=`<div class="note" style="margin-top:8px">${parsed.length} valid row(s) found; fix the errors above (or import only the valid ones).</div>`;
+      }else{
+        prev.innerHTML=`<div class="note" style="margin-top:8px"><span class="ti ti-check" style="color:var(--jade)"></span> ${parsed.length} employee row(s) ready to import.</div>`;
+      }
+      document.getElementById("bulkCommitBtn").disabled = parsed.length===0;
+    }catch(x){err.textContent="Couldn't read that file — is it a valid .xlsx?";}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function commitBulk(){
+  if(!_bulkParsed.length){document.getElementById("bulkErr").textContent="Nothing to import — choose a file first.";return;}
+  let added=0,n=5100;
+  _bulkParsed.forEach(p=>{
+    while(DB.employees["E-"+n]) n++;
+    const id="E-"+n; n++;
+    DB.employees[id]={id,name:p.name,fn:p.fn,sub:p.sub,desig:p.desig,lvl:p.lvl,mgr:p.mgr,hipot:p.hipot,hcat:p.hipot?"—":"",loc:p.loc};
+    added++;
+  });
+  _bulkParsed=[];
+  closeModal();render();toast(added+" employee"+(added>1?"s":"")+" imported");
+}
+function vAccess(){
+  const rows=Object.entries(DB.grants).map(([id,g])=>`<tr>
+    <td><div class="who"><span class="av">${initials(nm(id))}</span><div><div style="font-weight:500">${nm(id)}</div><div style="font-size:11.5px;color:var(--t3)">${E(id).desig}</div></div></div></td>
+    <td><span class="pill ${g.login==="HR Admin"?"p-amber":g.login==="Leadership"?"p-violet":"p-blue"}">${g.login}</span></td>
+    <td>${g.fnScope}</td><td class="mono">L${g.minLvl}+</td><td>${g.tree?"Own tree":"Org-wide"}</td>
+    <td>${g.seeRisk?'<span class="pill p-amber">Yes</span>':'<span class="pill p-grey">No</span>'}</td>
+    <td style="text-align:right;white-space:nowrap"><button class="btn sm" onclick="editGrant('${id}')">Edit</button> <button class="btn sm rust" onclick="deleteGrant('${id}')">Remove</button></td></tr>`).join("");
+  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+      <h2 style="margin:0">Access grants</h2>
+      <button class="btn sm pri" onclick="editGrant('')"><span class="ti ti-plus" style="font-size:13px"></span>Add grant</button></div>
+    <p class="hint">Who logs in as what, and the scope that governs their view. This drives the leadership filters.</p>
+    <table class="tbl"><thead><tr><th>User</th><th>Login</th><th>Function</th><th>Min level</th><th>Reporting scope</th><th>Sees risk/comp</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="note">Mentors aren't listed here — their scope is derived automatically from the pairings sheet (they see exactly their mentees).</div>`;
+}
+function editGrant(id){
+  const g = id ? DB.grants[id] : {login:"Leadership",fnScope:"All",minLvl:0,tree:false,seeRisk:false};
+  const empOpts=Object.values(DB.employees).filter(e=>e.id!=="E-0001").map(e=>`<option value="${e.id}" ${id===e.id?"selected":""}>${e.name} — ${e.desig}</option>`).join("");
+  const fnOpts=["All","Delivery","Growth","Enabling","HR"].map(o=>`<option ${g.fnScope===o?"selected":""}>${o}</option>`).join("");
+  const loginOpts=["Leadership","HR Admin"].map(o=>`<option ${g.login===o?"selected":""}>${o}</option>`).join("");
+  document.getElementById("modalBody").innerHTML=`
+    <h3>${id?"Edit":"Add"} access grant</h3><div class="sub">Controls what this user can see when they log in.</div>
+    <label>User</label>
+    <select id="grEmp" ${id?"disabled":""} style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">${empOpts}</select>
+    <label>Login type</label>
+    <select id="grLogin" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">${loginOpts}</select>
+    <div style="display:flex;gap:12px">
+      <div style="flex:1"><label>Function scope</label>
+        <select id="grFn" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">${fnOpts}</select></div>
+      <div style="flex:1"><label>Min level</label><input type="number" id="grLvl" min="0" max="14" value="${g.minLvl}"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:14px"><input type="checkbox" id="grTree" ${g.tree?"checked":""}> Limit to own reporting tree</label>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:8px"><input type="checkbox" id="grRisk" ${g.seeRisk?"checked":""}> Can see risk / comp data</label>
+    <div class="foot"><button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn pri" onclick="saveGrant('${id||""}')">Save grant</button></div>`;
+  document.getElementById("modalBg").classList.add("on");
+}
+function saveGrant(id){
+  const eid = id || document.getElementById("grEmp").value;
+  DB.grants[eid]={
+    login:document.getElementById("grLogin").value,
+    fnScope:document.getElementById("grFn").value,
+    minLvl:+document.getElementById("grLvl").value,
+    tree:document.getElementById("grTree").checked,
+    seeRisk:document.getElementById("grRisk").checked
+  };
+  closeModal();render();toast(id?"Grant updated":"Grant added");
+}
+function deleteGrant(id){
+  if(id==="E-0001"){toast("Can't remove the HR admin grant");return;}
+  delete DB.grants[id];render();toast("Grant removed");
+}
+function vIntegrity(){
+  const problems=[];
+  DB.pairings.forEach(p=>{if(!E(p.mentee))problems.push(`Pairing ${p.id}: mentee ${p.mentee} not in Employees`);if(!E(p.mentor))problems.push(`Pairing ${p.id}: mentor ${p.mentor} not in Employees`);});
+  DB.targets.forEach(t=>{if(!E(t.emp))problems.push(`Target ${t.id}: owner ${t.emp} missing`);if(!E(t.approver))problems.push(`Target ${t.id}: approver ${t.approver} missing`);});
+  DB.succession.forEach((s,i)=>{if(!E(s.incumbent))problems.push(`Succession ${i}: incumbent missing`);if(!E(s.successor))problems.push(`Succession ${i}: successor ${s.successor} missing`);});
+  // reconciliation: hipot flagged but low 9-box
+  const recon=[];
+  Object.values(DB.employees).forEach(e=>{const nb=DB.ninebox[e.id];if(e.hipot&&nb&&nb.pot<2)recon.push(`${e.name}: flagged HiPot but 9-box potential is low`);});
+  const okCount=DB.pairings.length+DB.targets.length+DB.succession.length;
+  return `<div class="kpis">
+      <div class="kpi"><div class="l">Links checked</div><div class="v mono">${okCount}</div></div>
+      <div class="kpi"><div class="l">Broken references</div><div class="v mono" style="color:${problems.length?'var(--rust)':'var(--jade)'}">${problems.length}</div></div>
+      <div class="kpi"><div class="l">Reconciliation flags</div><div class="v mono" style="color:${recon.length?'var(--amber)':'var(--jade)'}">${recon.length}</div></div>
+    </div>
+    <div class="card"><h2>Referential integrity</h2><p class="hint">Every ID reference cross-checked against the Employees master.</p>
+      ${problems.length?problems.map(p=>`<div class="kline"><div class="nm" style="color:var(--rust)"><span class="ti ti-alert-circle"></span> ${p}</div></div>`).join(""):'<div class="note"><span class="ti ti-check" style="color:var(--jade)"></span> All references resolve. No orphaned IDs.</div>'}</div>
+    <div class="card"><h2>HiPot ↔ 9-box reconciliation</h2><p class="hint">Under "Independent" policy, contradictions are surfaced, not hidden.</p>
+      ${recon.length?recon.map(r=>`<div class="kline"><div class="nm"><span class="flag"><span class="ti ti-flag"></span> ${r}</span></div></div>`).join(""):'<div class="note"><span class="ti ti-check" style="color:var(--jade)"></span> No contradictions in sample data.</div>'}</div>`;
+}
+
+/* ============ HR: SECTION VISIBILITY ============ */
+/* module tree: [key,label,isSub] — isSub indents it under its parent module */
+const PERM_GROUPS=[
+  ["Employee modules","ti-user",[
+    ["kpi","My KPI",0],
+    ["career","My Career path",0],
+      ["career.path","Path selection",1],
+      ["career.milestone","Next milestone",1],
+      ["career.readiness","Readiness",1],
+    ["learning","My Learning Plan",0],
+      ["learning.actions","Development actions (70:20:10)",1],
+      ["learning.status","Status updates",1],
+    ["hipot","HiPot targets",0],
+      ["hipot.targets","Targets table",1],
+    ["succ","Succession Planning",0],
+      ["succ.mine","Successors for my role",1],
+      ["succ.iam","Roles I'm a successor for",1],
+    ["analysis","My Analysis",0],
+      ["analysis.ninebox","9-box mapping",1],
+      ["analysis.f360","360 feedback",1],
+      ["analysis.certs","Certifications & training",1],
+      ["analysis.projects","Project feedback",1],
+      ["analysis.swot","SWOT",1]
+  ]],
+  ["Mentor modules","ti-users",[
+    ["queue","Review queue",0],
+    ["mentees","My mentees",0],
+    ["interactions","Interactions",0]
+  ]],
+  ["Leadership modules","ti-chart-dots",[
+    ["overview","Org overview",0],
+    ["hipots","HiPots",0],
+    ["succmap","Succession map",0],
+    ["nextroles","Next roles",0]
+  ]]
+];
+function togglePerm(reg,key,field,on){
+  const R = reg==="mentor" ? DB.permsMentor : DB.perms;
+  if(!R[key]) R[key]={vis:true,edit:true};
+  R[key][field]=on;
+  render();
+  toast(`${reg} · ${key} · ${field==="vis"?"visibility":"editing"} ${on?"enabled":"disabled"}`);
+}
+function vSections(){
+  const swBox=(reg,key,field,val)=>`<label class="switch"><input type="checkbox" ${val?"checked":""} onchange="togglePerm('${reg}','${key}','${field}',this.checked)"><span class="track"></span></label>`;
+  // Employee modules — shown to both employee (own view) and mentor (mentee view): 4 toggles
+  const empGroup=(()=>{
+    const items=PERM_GROUPS[0][2];
+    const rows=items.map(([key,label,sub])=>{
+      const pe=DB.perms[key]||{vis:true,edit:true};
+      const pm=DB.permsMentor[key]||{vis:true,edit:true};
+      return `<div class="permrow4 ${sub?"sub":""}">
+        <div class="permlabel">${sub?'<span class="subarrow">↳</span>':''}${label}</div>
+        <div class="permtoggle">${swBox("emp",key,"vis",pe.vis!==false)}</div>
+        <div class="permtoggle">${swBox("emp",key,"edit",pe.edit!==false)}</div>
+        <div class="permtoggle">${swBox("mentor",key,"vis",pm.vis!==false)}</div>
+        <div class="permtoggle">${swBox("mentor",key,"edit",pm.edit!==false)}</div>
+      </div>`;
+    }).join("");
+    return `<div class="card"><h2><span class="ti ti-user" style="font-size:15px;color:var(--jade);vertical-align:-2px;margin-right:6px"></span>Employee learning modules</h2>
+      <p class="hint">These components appear on the employee's own view <b>and</b> on the mentor's view of that mentee. Control each context separately.</p>
+      <div class="permhead4"><span></span><span class="colgrp" style="grid-column:2/4">Employee (own view)</span><span class="colgrp" style="grid-column:4/6">Mentor (mentee view)</span></div>
+      <div class="permhead4 sub2"><span></span><span>Visible</span><span>Editable</span><span>Visible</span><span>Editable</span></div>
+      ${rows}</div>`;
+  })();
+  // Mentor own modules + Leadership — single registry each
+  const single=(groupIdx,reg)=>{
+    const [title,ic,items]=PERM_GROUPS[groupIdx];
+    const rows=items.map(([key,label,sub])=>{
+      const p=(reg==="mentor"?DB.permsMentor:DB.perms)[key]||{vis:true,edit:true};
+      return `<div class="permrow ${sub?"sub":""}">
+        <div class="permlabel">${sub?'<span class="subarrow">↳</span>':''}${label}</div>
+        <div class="permtoggle"><span class="permcap">Visible</span>${swBox(reg,key,"vis",p.vis!==false)}</div>
+        <div class="permtoggle"><span class="permcap">Editable</span>${swBox(reg,key,"edit",p.edit!==false)}</div>
+      </div>`;
+    }).join("");
+    return `<div class="card"><h2><span class="ti ${ic}" style="font-size:15px;color:var(--jade);vertical-align:-2px;margin-right:6px"></span>${title}</h2>
+      <div class="permhead"><span></span><span>Visible</span><span>Editable</span></div>${rows}</div>`;
+  };
+  return `<div class="note" style="margin-bottom:15px"><span class="ti ti-info-circle" style="font-size:14px"></span> Employee learning modules have <b>separate toggles for the employee's own view and the mentor's view</b> of that mentee. Visible-off hides the component; Editable-off hides its edit/add controls. Admin always sees & edits everything.</div>
+    ${empGroup}
+    ${single(1,"mentor")}
+    ${single(2,"emp")}`;
+}
+
+const ACCOUNTS={
+  // each demo account is a real person; their available "hats" are computed from the data
+  "employee@altudo.co":{empId:"E-5102",label:"Employee",land:"employee"},   // Ayushi Taneja
+  "mentor@altudo.co":{empId:"E-5101",label:"Mentor",land:"mentor"},         // Rajat Babbar — mentors Ayushi & Jahanvi
+  "leadership@altudo.co":{empId:"E-5104",label:"Leadership",land:"leader"}, // Manisha Naik
+  "admin@altudo.co":{empId:"E-0001",label:"HR admin",land:"hr"}             // HR admin
+};
+let CURRENT_ACCOUNT=null;
+let CURRENT_EMP=null;
+let IS_ADMIN=false;
+
+/* which roles is this person tagged for, from the data */
+function availableRoles(empId){
+  if(empId==="E-0001") return ["hr"];
+  const roles=["employee"];                                  // everyone is an employee/mentee
+  if(menteesOf(empId).length>0) roles.push("mentor");        // mentors someone
+  // Leadership view is not offered as a switchable hat for now.
+  return roles;
+}
+const ROLE_LABEL={employee:"Mentee",mentor:"Mentor",leader:"Leadership",hr:"HR admin"};
+
+function fill(email){document.getElementById("loginEmail").value=email;document.getElementById("loginPass").value="demo";document.getElementById("loginErr").textContent="";}
+function doLogin(){
+  const email=(document.getElementById("loginEmail").value||"").trim().toLowerCase();
+  const acct=ACCOUNTS[email];
+  if(!acct){document.getElementById("loginErr").textContent="No account for that email. Try a demo account below.";return;}
+  CURRENT_ACCOUNT=email;
+  CURRENT_EMP=acct.empId;
+  IS_ADMIN=(acct.empId==="E-0001");
+  document.getElementById("loginScreen").style.display="none";
+  document.getElementById("appShell").style.display="flex";
+  // admin keeps the full View-as switcher; multi-hat users get the "Logged in as" role switcher
+  document.getElementById("rolePick").style.display=IS_ADMIN?"block":"none";
+  document.getElementById("acctLine").innerHTML=`Signed in as<br><b>${email}</b>`;
+  const auto=availableRoles(acct.empId);
+  // start on the account's declared landing role
+  const land=acct.land||auto[0];
+  // switchable hats = computed hats + landing role, minus leadership (not offered as a hat for now)
+  let hats=Array.from(new Set([land,...auto])).filter(r=>r!=="leader"&&r!=="hr");
+  buildHatSwitcher(hats);
+  // lock the actor to this person for non-admin
+  if(!IS_ADMIN){ ACTOR=acct.empId; }
+  setRole(land);
+}
+/* top-right "Logged in as" switcher — only the hats this person holds */
+function buildHatSwitcher(roles){
+  const host=document.getElementById("hatSwitch");
+  if(!host) return;
+  if(IS_ADMIN || roles.length<2){ host.style.display="none"; host.innerHTML=""; return; }
+  host.style.display="flex";
+  host.innerHTML=`<span class="hatlab">Logged in as</span>
+    <select id="hatSelect" onchange="switchHat(this.value)">
+      ${roles.map(r=>`<option value="${r}">${ROLE_LABEL[r]}</option>`).join("")}
+    </select>`;
+}
+function switchHat(role){
+  // switch the person's active view without signing out; keep their identity
+  ACTOR=CURRENT_EMP;
+  setRole(role);
+  const sel=document.getElementById("hatSelect"); if(sel) sel.value=role;
+  toast("Now viewing as "+ROLE_LABEL[role]);
+}
+function signOut(){
+  CURRENT_ACCOUNT=null;CURRENT_EMP=null;IS_ADMIN=false;
+  document.getElementById("appShell").style.display="none";
+  document.getElementById("loginScreen").style.display="flex";
+  document.getElementById("loginEmail").value="";
+  document.getElementById("loginPass").value="";
+  document.getElementById("loginErr").textContent="";
+}
+
+
+/* ============================================================================
+   LIVE SYNC — Excel (SharePoint) through ONE Power Automate flow
+   ----------------------------------------------------------------------------
+   Paste the single flow URL below and the portal goes live. Leave it blank and
+   everything here is inert — the portal keeps running on its built-in demo data.
+
+   The flow is one "When an HTTP request is received" (POST) trigger with a
+   Switch on the "table" value in the body:
+       {"table":"READ"}                                    -> returns every table
+       {"table":"Career","key":"CR-001","fields":{...}}     -> writes one row
+   Build steps: TalentPortal_PowerAutomate_Setup.md
+   ========================================================================== */
+const FLOW_URL = "https://defaultb9d69197ce1f49079545b307af2335.e9.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/29/workflows/d93a846e00f64662a999b2534c595bd9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ZtuyRrkSStlvJNhYH4yVtV6u2Els6y2Q3EO1-1A9Du4";   // <-- paste the HTTP POST URL of your one flow
+
+const SYNC_ON   = () => !!FLOW_URL;
+const truthy    = v => String(v).trim().toUpperCase() === "TRUE";
+let   LAST_SYNC = null;
+let   SYNC_STATE = "off";   // off | loading | live | error
+
+/* every call to Power Automate goes through here — one URL, one method */
+function callFlow(payload){
+  return fetch(FLOW_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },   // keeps it a CORS-simple request
+    body: JSON.stringify(Object.assign({
+      actor: (typeof CURRENT_EMP !== "undefined" && CURRENT_EMP) ? CURRENT_EMP : ACTOR,
+      source: "Dashboard"
+    }, payload))
+  }).then(r=>{
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  });
+}
+
+/* ---------- status pill (bottom-left) ---------- */
+function syncPill(){
+  let el = document.getElementById("syncPill");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "syncPill";
+    el.style.cssText = "position:fixed;left:14px;bottom:14px;z-index:60;font:500 11.5px/1 Inter,system-ui,sans-serif;"
+      + "padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--t2);"
+      + "box-shadow:0 2px 10px rgba(0,0,0,.07);cursor:pointer;display:flex;align-items:center;gap:7px";
+    el.onclick = () => { if(SYNC_ON()) loadFromExcel(true); };
+    document.body.appendChild(el);
+  }
+  const dot = c => '<span style="width:7px;height:7px;border-radius:50%;background:'+c+';display:inline-block"></span>';
+  if(SYNC_STATE==="off")          el.innerHTML = dot("#B9BDB4") + "Demo data — not connected to Excel";
+  else if(SYNC_STATE==="loading") el.innerHTML = dot("#E8A33D") + "Syncing with Excel\u2026";
+  else if(SYNC_STATE==="error")   el.innerHTML = dot("#C8553D") + "Sync failed — click to retry";
+  else el.innerHTML = dot("#2FBFA5") + "Live \u00b7 synced " + LAST_SYNC + " \u00b7 click to refresh";
+}
+
+/* ---------- READ: one POST with table:"READ" pulls every table ---------- */
+async function loadFromExcel(manual){
+  if(!SYNC_ON()){ SYNC_STATE="off"; syncPill(); return; }
+  SYNC_STATE="loading"; syncPill();
+  try{
+    const d = await callFlow({ table:"READ" });
+
+    /* -- 2. employees -------------------------------------------------- */
+    if(Array.isArray(d.employees) && d.employees.length){
+      DB.employees = {};
+      d.employees.filter(e=>e.EmployeeID && String(e.RecordStatus||"Active")!=="Inactive").forEach(e=>{
+        DB.employees[e.EmployeeID] = {
+          id:e.EmployeeID, name:e.FullName, email:e.WorkEmail||"",
+          fn:e.Function, sub:e.SubFunction, desig:e.Designation,
+          lvl:Number(e.Level)||0, mgr:e.ManagerID||null,
+          hipot:truthy(e.HiPot), hcat:e.HiPotCategory||"", loc:e.Location||"\u2014",
+          mentorId:e.MentorID||"", role:e.PortalRole||"Employee"
+        };
+      });
+    }
+
+    /* -- pairings (drives mentor access) -------------------------------- */
+    if(Array.isArray(d.pairings)){
+      DB.pairings = d.pairings.filter(p=>p.PairingID).map(p=>({
+        id:p.PairingID, mentee:p.MenteeID, mentor:p.MentorID,
+        type:p.PairingType||"Career", status:p.Status||"Active"
+      }));
+    }
+
+    /* -- 4. next role + readiness tenure -------------------------------- */
+    if(Array.isArray(d.career)){
+      DB.career = {};
+      d.career.filter(c=>c.EmployeeID).forEach(c=>{
+        const ladder = String(c.CareerLadder||"").split("|").map(s=>s.trim()).filter(Boolean);
+        const at = Number(c.CurrentRungIndex);
+        DB.career[c.EmployeeID] = { selectedPath:0, paths:[{
+          name: c.PathName || "Career path",
+          ladder: ladder,
+          atIdx: isNaN(at) ? Math.max(0, ladder.indexOf(c.CurrentRole)) : at,
+          next: c.NextRole || "",
+          readiness: c.Readiness || "",
+          _rowId: c.CareerID,
+          _setBy: c.ReadinessSetBy || "",
+          _review: c.ReadinessReviewDate || "",
+          _approval: c.ApprovalStatus || "Pending" 
+        }]};
+      });
+    }
+
+    /* -- 3. tasks + comments -------------------------------------------- */
+    DB.learningPlans = {};
+    Object.keys(DB.employees).forEach(id=>{
+      const p = DB.pairings.find(x=>x.mentee===id && x.status==="Active");
+      DB.learningPlans[id] = { mentor: p ? p.mentor : null, actions:[], changelog:[] };
+    });
+    (d.actions||[]).filter(a=>a.ActionID).forEach(a=>{
+      const lp = DB.learningPlans[a.EmployeeID]; if(!lp) return;
+      if(!truthy(a.VisibleToMentee) && !IS_ADMIN && ROLE==="employee") return;   // row-level visibility
+      lp.actions.push({
+        id:a.ActionID, title:a.ActionTitle, band:String(a.Band),
+        timeline:{start:a.StartDate||"", end:a.EndDate||""},
+        status:a.ApprovalStatus||"Draft", update:a.StatusUpdate||"",
+        comment:a.LatestComment||"",
+        _visMentee: truthy(a.VisibleToMentee) ? "TRUE" : "FALSE",
+        _visLead:   truthy(a.VisibleToLeadership) ? "TRUE" : "FALSE",
+        _createdBy: a.CreatedBy||"", _createdOn: a.CreatedOn||""
+      });
+      if(a.MentorID && !lp.mentor) lp.mentor = a.MentorID;
+    });
+    (d.comments||[]).filter(c=>c.CommentID).forEach(c=>{
+      const lp = DB.learningPlans[c.EmployeeID]; if(!lp) return;
+      if(!truthy(c.VisibleToMentee) && !IS_ADMIN && ROLE==="employee") return;
+      lp.changelog.push({ d:c.CreatedOn||"", by:c.AuthorID,
+        tt:(c.AuthorRole||"Comment")+" \u00b7 "+(c.ActionID||""), tx:c.CommentText||"" });
+    });
+
+    /* -- 1. visibility + editor toggles --------------------------------- */
+    (d.permissions||[]).filter(p=>p.PermissionKey).forEach(p=>{
+      DB.perms[p.PermissionKey] = { vis:truthy(p.MenteeVisible), edit:truthy(p.MenteeEdit) };
+      if(String(p.MentorVisible).toLowerCase() !== "n/a")
+        DB.permsMentor[p.PermissionKey] = { vis:truthy(p.MentorVisible), edit:truthy(p.MentorEdit) };
+    });
+    (d.config||[]).filter(c=>c.SettingKey).forEach(c=>{
+      const v = String(c.Value).trim().toUpperCase();
+      DB.config[c.SettingKey] = v==="TRUE" ? true : v==="FALSE" ? false : c.Value;
+    });
+
+    LAST_SYNC = new Date().toTimeString().slice(0,5);
+    SYNC_STATE = "live"; syncPill();
+    if(CURRENT_EMP){ buildNav(); updateMeta(); render(); }
+    if(manual) toast("Refreshed from Excel");
+  }catch(err){
+    console.error("[sync] read failed", err);
+    SYNC_STATE = "error"; syncPill();
+    if(manual) toast("Couldn't reach Excel \u2014 showing last loaded data");
+  }
+}
+
+/* ---------- WRITE: same URL, the table name picks the Switch case ---------- */
+function saveToExcel(table, key, fields, meta){
+  if(!SYNC_ON()) return Promise.resolve();
+  return callFlow(Object.assign({
+    table: table, key: key || "", fields: fields || {}
+  }, meta || {})).then(()=>{
+    LAST_SYNC = new Date().toTimeString().slice(0,5);
+    SYNC_STATE = "live"; syncPill();
+  }).catch(err=>{
+    console.error("[sync] write failed", table, key, err);
+    SYNC_STATE = "error"; syncPill();
+    toast("Saved on screen, but Excel didn't confirm \u2014 refresh to check");
+  });
+}
+const today = () => new Date().toISOString().slice(0,10);
+
+/* ============================================================================
+   HOOKS — the existing save functions are wrapped, not rewritten
+   ========================================================================== */
+
+/* 1. toggles ---------------------------------------------------------------- */
+const _togglePerm = togglePerm;
+togglePerm = function(reg, key, field, on){
+  _togglePerm(reg, key, field, on);
+  const col = (reg==="mentor" ? "Mentor" : "Mentee") + (field==="vis" ? "Visible" : "Edit");
+  const B  = v => v!==false ? "TRUE" : "FALSE";
+  const pe = DB.perms[key] || {vis:true, edit:true};
+  const pm = DB.permsMentor[key];               // absent on leadership-only keys
+  saveToExcel("Permissions", key, {
+    PermissionKey: key,
+    MenteeVisible: B(pe.vis),          MenteeEdit: B(pe.edit),
+    MentorVisible: pm ? B(pm.vis) : "n/a",
+    MentorEdit:    pm ? B(pm.edit) : "n/a",
+    LastChangedBy: CURRENT_EMP || ACTOR, LastChangedOn: today()
+  }, {field:col, oldValue:String(!on).toUpperCase(), newValue:String(on).toUpperCase(), changeType:"Updated"});
+};
+
+/* 2. employees -------------------------------------------------------------- */
+function empRow(e, id, status){
+  return {
+    EmployeeID:id, FullName:e.name, WorkEmail:e.email||"", Function:e.fn, SubFunction:e.sub,
+    Designation:e.desig, Level:e.lvl, ManagerID:e.mgr||"", MentorID:e.mentorId||"",
+    HiPot:e.hipot?"TRUE":"FALSE", HiPotCategory:e.hcat||"", Location:e.loc||"",
+    PortalRole:e.role||"Employee", RecordStatus:status,
+    LastUpdatedBy:CURRENT_EMP||ACTOR, LastUpdatedOn:today()
+  };
+}
+const _saveEmp = saveEmp;
+saveEmp = function(id){
+  const before = new Set(Object.keys(DB.employees));
+  _saveEmp(id);
+  const targetId = id || Object.keys(DB.employees).find(k=>!before.has(k));
+  const e = DB.employees[targetId]; if(!e) return;
+  saveToExcel(id ? "Employees" : "EmployeesNew", targetId, empRow(e, targetId, "Active"),
+    {changeType: id ? "Updated" : "Created"});
+};
+
+function deactivate(id, orig){
+  const snap = DB.employees[id];
+  if(!snap) return;
+  const row = empRow(snap, id, "Inactive");
+  orig(id);
+  if(!DB.employees[id])
+    saveToExcel("Employees", id, row,
+      {changeType:"Deactivated", field:"RecordStatus", oldValue:"Active", newValue:"Inactive"});
+}
+const _quickDeleteEmp = quickDeleteEmp;
+quickDeleteEmp = function(id){ deactivate(id, _quickDeleteEmp); };
+const _deleteEmp = deleteEmp;
+deleteEmp = function(id){ deactivate(id, _deleteEmp); };
+
+/* 3. tasks, status and comments --------------------------------------------- */
+function newActionId(){
+  const used = new Set();
+  Object.values(DB.learningPlans).forEach(p => (p.actions||[]).forEach(x => used.add(x.id)));
+  let id;
+  do {
+    id = "LA-" + Date.now().toString(36).slice(-5)
+       + Math.floor(Math.random()*46656).toString(36).padStart(3, "0");
+  } while(used.has(id));
+  return id;
+}
+function actionRow(a, eid, mentorId){
+  return {
+    ActionID:a.id, EmployeeID:eid, Band:String(a.band), ActionTitle:a.title,
+    StartDate:(a.timeline&&a.timeline.start)||"", EndDate:(a.timeline&&a.timeline.end)||"",
+    ApprovalStatus:a.status||"Draft", StatusUpdate:a.update||"", LatestComment:a.comment||"",
+    VisibleToMentee:a._visMentee||"TRUE", VisibleToLeadership:a._visLead||"TRUE",
+    MentorID:mentorId||"",
+    CreatedBy:a._createdBy||(CURRENT_EMP||ACTOR), CreatedOn:a._createdOn||today(),
+    LastUpdatedBy:CURRENT_EMP||ACTOR, LastUpdatedOn:today()
+  };
+}
+const _saveLA = saveLA;
+saveLA = function(id){
+  const lp = DB.learningPlans[ACTOR];
+  const snap = {};
+  if(lp) lp.actions.forEach(a => snap[a.id] = JSON.stringify(a));
+  _saveLA(id);
+  if(!lp) return;
+  lp.actions.forEach(a=>{
+    const was = snap[a.id];
+    if(was === JSON.stringify(a)) return;          // untouched
+    const isNew = was === undefined;
+    if(isNew){
+      // the prototype's id is "LA-" + a number under ~95, which collides across
+      // employees. ActionID is the key column, so give it a table-wide unique one.
+      const oldId = a.id;
+      a.id = newActionId();
+      lp.changelog.forEach(l => { if(l.target === oldId) l.target = a.id; });
+      a._createdBy = CURRENT_EMP||ACTOR; a._createdOn = today();
+    }
+    saveToExcel(isNew ? "ActionsNew" : "Actions", a.id,
+      actionRow(a, ACTOR, lp.mentor), {changeType: isNew ? "Created" : "Updated"});
+
+    // a changed comment is also filed as its own threaded comment row
+    const prev = was ? (JSON.parse(was).comment||"") : "";
+    if((a.comment||"") && (a.comment||"") !== prev){
+      saveToExcel("Comments", "", {
+        ActionID:a.id, EmployeeID:ACTOR, AuthorID:CURRENT_EMP||ACTOR,
+        AuthorRole: ROLE==="mentor" ? "Mentor" : IS_ADMIN ? "HR Admin" : "Employee",
+        CommentText:a.comment, VisibleToMentee:"TRUE", VisibleToLeadership:"FALSE",
+        CreatedOn:today()
+      }, {changeType:"Comment"});
+    }
+  });
+};
+
+const _approveLA = approveLA;
+approveLA = function(eid, id, ok){
+  _approveLA(eid, id, ok);
+  const lp = DB.learningPlans[eid]; if(!lp) return;
+  const a = lp.actions.find(x=>x.id===id); if(!a) return;
+  saveToExcel("Actions", id, actionRow(a, eid, lp.mentor),
+    {changeType: ok ? "Approved" : "Returned", field:"ApprovalStatus", newValue:a.status});
+};
+
+/* 4. next role + readiness tenure -------------------------------------------- */
+function _careerRowId(){
+  const c = curPath(ACTOR);
+  return (c && c._rowId) ? c._rowId : ("CR-" + String(ACTOR).replace(/^E-/, ""));
+}
+/* no row on the sheet yet -> route to the CareerNew case, then remember the id */
+function _careerTable(){
+  const c = curPath(ACTOR);
+  if(c && c._rowId) return "Career";
+  if(c) c._rowId = "CR-" + String(ACTOR).replace(/^E-/, "");
+  return "CareerNew";
+}
+function careerRow(){
+  const c = curPath(ACTOR); if(!c) return {};
+  return {
+    CareerID:_careerRowId(), EmployeeID:ACTOR, PathName:c.name||"",
+    CareerLadder:(c.ladder||[]).join("|"), CurrentRole:c.ladder[c.atIdx]||"",
+    CurrentRungIndex:c.atIdx, NextRole:c.next||"",
+    MilestoneType: c.next===c.ladder[c.atIdx+2] ? "Skip level" : "Immediate next",
+    Readiness:c.readiness||"", ReadinessSetBy:c._setBy||"",
+    ReadinessReviewDate:c._review||"", PathSelected:"TRUE",
+    ApprovalStatus:c._approval||"Pending",
+    LastUpdatedBy:CURRENT_EMP||ACTOR, LastUpdatedOn:today()
+  };
+}
+const _saveReadiness = saveReadiness;
+saveReadiness = function(){
+  const c0 = curPath(ACTOR); const old = c0 ? c0.readiness : "";
+  _saveReadiness();
+  const c = curPath(ACTOR); if(!c) return;
+  c._setBy = CURRENT_EMP||ACTOR;
+  saveToExcel(_careerTable(), _careerRowId(), careerRow(),
+    {changeType:"Updated", field:"Readiness", oldValue:old, newValue:c.readiness});
+};
+
+const _saveMilestone = saveMilestone;
+saveMilestone = function(){
+  const c0 = curPath(ACTOR); const old = c0 ? c0.next : "";
+  _saveMilestone();
+  const c = curPath(ACTOR); if(!c) return;
+  saveToExcel(_careerTable(), _careerRowId(), careerRow(),
+    {changeType:"Updated", field:"NextRole", oldValue:old, newValue:c.next});
+};
+
+const _selectPath = selectPath;
+selectPath = function(i){
+  _selectPath(i);
+  const c = curPath(ACTOR); if(!c) return;
+  saveToExcel(_careerTable(), _careerRowId(), careerRow(),
+    {changeType:"Updated", field:"PathName", newValue:c.name});
+};
+
+/* pull fresh data the moment someone signs in ------------------------------- */
+const _doLogin = doLogin;
+doLogin = function(){
+  _doLogin();
+  if(CURRENT_EMP) loadFromExcel(false);
+};
+
+syncPill();
+
+</script>
+</body>
+</html>
