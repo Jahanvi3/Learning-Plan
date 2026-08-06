@@ -4064,7 +4064,7 @@ function signOut(){
        {"table":"Career","key":"CR-001","fields":{...}}     -> writes one row
    Build steps: TalentPortal_PowerAutomate_Setup.md
    ========================================================================== */
-const FLOW_URL = "";   // <-- paste the HTTP POST URL of your one flow
+const FLOW_URL = "https://defaultb9d69197ce1f49079545b307af2335.e9.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/15/workflows/7ecf97401826423c86f275364ed91c21/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rWJgwxv91JZfS_eedf18bA82tXUnqNaLaxMA2Wkubag";   // <-- paste the HTTP POST URL of your one flow
 
 const SYNC_ON   = () => !!FLOW_URL;
 const truthy    = v => String(v).trim().toUpperCase() === "TRUE";
