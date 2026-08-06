@@ -3260,18 +3260,22 @@ function bulkAddEmp(){
    written: one bad row anywhere and the entire file is rejected, so a half
    loaded master never happens.
    ========================================================================== */
+/* cols = written to the template and recognised on upload
+   opt  = recognised if the column is there, silently skipped if not
+   req  = the only columns that must exist, or the file is rejected          */
 const BULK_SHEETS = [
   { key:"Employees", label:"People",
     cols:["EmployeeID","FullName","WorkEmail","Function","SubFunction","Designation",
-          "Next role","Focus Brief","Level","ManagerID","MentorID",
-          "HiPot (Y/N)","HiPotCategory","Location","PortalRole",
-          "RecordStatus","Feedback360URL","ExpertInsightsURL","EVPURL","ProjectFeedbackURL"],
+          "Next role","Focus Brief","Level","ManagerID","MentorID"],
+    opt:["HiPot (Y/N)","HiPotCategory","Location","PortalRole",
+         "RecordStatus","Feedback360URL","ExpertInsightsURL","EVPURL","ProjectFeedbackURL"],
+    req:["EmployeeID","FullName","Designation","Level"],
     sample:[["","Priya Nair","priya.nair@altudo.co","Enabling","Human Resources","Senior Associate",
              "Associate Lead","What this cycle is really about, in a few lines.",3,
-             "E-5101","E-5101","N","","Gurugram","Employee","Active","","","",""],
+             "E-5101","E-5101"],
             ["E-5102","Ayushi Taneja","ayushi.taneja@altudo.co","Enabling","Human Resources","Senior Associate",
              "Associate Lead","Own the FY27 onboarding revamp end to end.",3,
-             "E-5101","E-5101","Y","Below Managers","Gurugram","Employee","Active","","","",""]] },
+             "E-5101","E-5101"]] },
 
   { key:"Career", label:"Career path, next role & readiness",
     cols:["EmployeeID","PathName","CareerLadder (a|b|c)","CurrentRole","CurrentRungIndex",
@@ -3299,7 +3303,10 @@ const BULK_SHEETS = [
     sample:[["E-5102","Certification","SHRM-CP Foundations","SHRM","2026-06-30","2029-06-30",
              "SHRM-1234","24","Self-paced",""]] },
 
-  { key:"Pairings", label:"Mentor pairings (optional)",
+  /* Not written to the template any more — MentorID on the People sheet creates
+     the pairing. Still parsed if a file happens to carry the sheet, for the
+     non-standard cases (HiPot pairings, paused or ended). */
+  { key:"Pairings", label:"Mentor pairings (optional)", hidden:true,
     cols:["MenteeID","MentorID","PairingType","Status"],
     sample:[["E-5102","E-5101","Career","Active"]] }
 ];
@@ -3308,10 +3315,12 @@ const BULK_NOTES = [
   ["Sheet","Column","Required","Allowed values / format"],
   ["Employees","EmployeeID","No","Leave blank to create a new person. Fill it to update an existing one."],
   ["Employees","FullName / Designation / Level","Yes","Level is a whole number"],
-  ["Employees","HiPot (Y/N)","No","Y or N"],
-  ["Employees","PortalRole","No","Employee, Mentor, Leadership, HR Admin. Blank = Employee"],
-  ["Employees","MentorID","No","The mentor's EmployeeID. The pairing is created automatically \u2014 the Pairings sheet is only for non-standard cases (HiPot pairings, paused/ended)"],
+  ["Employees","MentorID","No","Who mentors this person. The pairing is created automatically \u2014 there is no pairings sheet to fill in."],
+  ["Employees","MentorID / ManagerID format","No","EmployeeID (E-5101), work email, or full name \u2014 all three work. They are matched back to an ID on upload."],
+  ["Employees","MentorID ordering","No","The mentor can sit anywhere in the file, above or below their mentee. New joiners can mentor each other in the same upload."],
   ["Employees","Next role / Focus Brief","No","Optional. Fills the person's career record; the Career sheet can add the full ladder and readiness"],
+  ["Employees","Optional extra columns","No","Add any of these as columns and they will be picked up: HiPot (Y/N), HiPotCategory, Location, PortalRole, RecordStatus, Feedback360URL, ExpertInsightsURL, EVPURL, ProjectFeedbackURL. Leave them out and they are simply skipped."],
+  ["Employees","PortalRole","No","Employee, Mentor, Leadership, HR Admin. Blank = Employee"],
   ["Employees","RecordStatus","No","Active or Inactive. Blank = Active"],
   ["Career","EmployeeID","Yes","Must exist, or be created on the Employees sheet in this same file"],
   ["Career","CareerLadder","No","Rungs separated by | , lowest first"],
@@ -3324,9 +3333,8 @@ const BULK_NOTES = [
   ["HipotTargets","Status","No","Not Started, Ongoing, Achieved"],
   ["Certifications","EntryType","No","Certification, Course, Seminar, Workshop, Conference, Webinar"],
   ["Certifications","CompletedOn / ExpiresOn","No","yyyy-mm-dd"],
-  ["Pairings","PairingType","No","Career or HiPot"],
-  ["Pairings","Status","No","Active, Paused, Ended"],
   ["","",""],
+  ["Pairings are worked out from MentorID on the People sheet \u2014 you never fill them in by hand.","",""],
   ["Any sheet you don't need can be left with just its header row \u2014 empty sheets are skipped.","",""],
   ["If one row anywhere fails validation, nothing at all is imported.","",""]
 ];
@@ -3336,7 +3344,7 @@ let _bulkParsed = null;
 async function downloadEmpTemplate(){
   if(!await ensureXLSX()){ toast("Spreadsheet library unavailable \u2014 check your connection and try again"); return; }
   const wb = XLSX.utils.book_new();
-  BULK_SHEETS.forEach(s=>{
+  BULK_SHEETS.filter(s=>!s.hidden).forEach(s=>{
     const ws = XLSX.utils.aoa_to_sheet([s.cols].concat(s.sample));
     ws["!cols"] = s.cols.map(c=>({wch:Math.max(13, Math.min(46, c.length+4))}));
     XLSX.utils.book_append_sheet(wb, ws, s.key);
@@ -3371,22 +3379,34 @@ async function parseBulkFile(ev){
       if(!ws) return;                                   // sheet simply absent
       const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:""});
       if(!aoa.length) return;
-      const head = (aoa[0]||[]).map(x=>String(x).trim());
+      /* the header isn't always row 1 — people put a title or a note above it.
+         Scan the first 15 rows for the one carrying the required columns. */
+      const allCols = s.cols.concat(s.opt||[]);
+      const need = s.req || s.cols;
+      const rowHas = row => {
+        const h = (row||[]).map(x=>String(x).trim());
+        const has = c => h.some(x=>x.toLowerCase()===c.toLowerCase()
+                                || x.toLowerCase().split(" (")[0]===c.toLowerCase().split(" (")[0]);
+        return need.every(has);
+      };
+      let headIdx = -1;
+      for(let i=0; i<Math.min(aoa.length, 15); i++){ if(rowHas(aoa[i])){ headIdx = i; break; } }
+
+      const head = (aoa[headIdx<0?0:headIdx]||[]).map(x=>String(x).trim());
       const ix = c => head.findIndex(x=>x.toLowerCase()===c.toLowerCase()
                                      || x.toLowerCase().split(" (")[0]===c.toLowerCase().split(" (")[0]);
-      const missing = s.cols.filter(c=>ix(c)<0);
-      if(missing.length){
-        errs.push(`${s.key}: these columns are missing or renamed \u2014 ${missing.join(", ")}`);
+      if(headIdx < 0){
+        errs.push(`${s.key}: couldn't find a header row \u2014 these columns are missing or renamed: ${need.filter(c=>ix(c)<0).join(", ")}`);
         return;
       }
-      const get = (row,c) => String(row[ix(c)]==null?"":row[ix(c)]).trim();
+      const get = (row,c) => { const i=ix(c); return i<0 ? "" : String(row[i]==null?"":row[i]).trim(); };
 
-      for(let r=1;r<aoa.length;r++){
+      for(let r=headIdx+1;r<aoa.length;r++){
         const row = aoa[r];
         if(!row || row.every(c=>String(c).trim()==="")) continue;
         const ln = r+1, at = `${s.key} row ${ln}`;
         const o = {};
-        s.cols.forEach(c=>o[c]=get(row,c));
+        allCols.forEach(c=>o[c]=get(row,c));
 
         if(s.key==="Employees"){
           if(!o.FullName)    errs.push(`${at}: FullName is empty.`);
@@ -3450,15 +3470,74 @@ async function parseBulkFile(ev){
           else if(!DB.employees[o.MentorID] && !newIds.has(o.MentorID))
             errs.push(`${at}: MentorID "${o.MentorID}" isn't a known employee.`);
         }
-        if(s.key==="Employees" && o.MentorID){
-          if(!DB.employees[o.MentorID] && !newIds.has(o.MentorID))
-            errs.push(`${at}: MentorID "${o.MentorID}" isn't a known employee \u2014 add them on this sheet or use an existing ID.`);
-          else if(o.EmployeeID && o.MentorID===o.EmployeeID)
-            errs.push(`${at}: MentorID is the same person \u2014 someone can't mentor themselves.`);
-        }
+        if(s.key==="Employees"){ o._at = at; }   // mentor/manager resolved after every row is read
         out[s.key].push(o);
       }
     });
+
+    /* ---- link mentors and managers ------------------------------------
+       Runs once every row has been read, so a mentor can appear anywhere in
+       the file — above or below the person they mentor. MentorID/ManagerID
+       accept an EmployeeID, a work email, or the person's full name; whatever
+       HR happened to type gets resolved back to an ID. */
+    (function linkPeople(){
+      const rows = out.Employees || [];
+      const byId = {}, byEmail = {}, byName = {};
+      const add = (id, name, email) => {
+        if(!id) return;
+        byId[String(id).toUpperCase()] = id;
+        const n = String(name||"").trim().toLowerCase().replace(/\s+/g," ");
+        const e = String(email||"").trim().toLowerCase();
+        if(n) byName[n] = (n in byName && byName[n]!==id) ? "__DUPE__" : id;
+        if(e) byEmail[e] = id;
+      };
+      Object.values(DB.employees).forEach(p=>add(p.id, p.name, p.email));
+      rows.forEach(r=>add(r.EmployeeID, r.FullName, r.WorkEmail));
+
+      const resolve = v => {
+        const s0 = String(v||"").trim();
+        if(!s0) return "";
+        const hit = byId[s0.toUpperCase()]
+                 || byEmail[s0.toLowerCase()]
+                 || byName[s0.toLowerCase().replace(/\s+/g," ")];
+        return hit || null;                       // null = present but unknown
+      };
+
+      rows.forEach(r=>{
+        [["MentorID","MentorID"],["ManagerID","ManagerID"]].forEach(([col,lab])=>{
+          const raw = r[col];
+          if(!raw) return;
+          const id = resolve(raw);
+          if(id === "__DUPE__"){
+            errs.push(`${r._at}: ${lab} "${raw}" matches more than one person — use their EmployeeID.`);
+          }else if(id === null){
+            errs.push(`${r._at}: ${lab} "${raw}" isn't a known employee — use an EmployeeID, work email or full name that appears on this sheet or already exists.`);
+          }else if(id === r.EmployeeID){
+            errs.push(`${r._at}: ${lab} is the same person — someone can't ${lab==="MentorID"?"mentor":"manage"} themselves.`);
+          }else{
+            r[col] = id;                          // normalise to the ID
+          }
+        });
+      });
+
+      /* a mentoring loop would make the mentee list recurse forever */
+      const mentorOf = {};
+      rows.forEach(r=>{ if(r.EmployeeID && r.MentorID) mentorOf[r.EmployeeID] = r.MentorID; });
+      Object.values(DB.employees).forEach(p=>{
+        if(p.id && !(p.id in mentorOf) && p.mentorId) mentorOf[p.id] = p.mentorId;
+      });
+      rows.forEach(r=>{
+        if(mentorOf[r.EmployeeID] === r.EmployeeID) return;   // already reported above
+        let cur = mentorOf[r.EmployeeID], hops = 0;
+        while(cur && hops++ < 60){
+          if(cur === r.EmployeeID){
+            errs.push(`${r._at}: mentoring loop — ${nm(r.EmployeeID)||r.EmployeeID} ends up mentoring themselves through the chain.`);
+            break;
+          }
+          cur = mentorOf[cur];
+        }
+      });
+    })();
 
     const total = BULK_SHEETS.reduce((a,s)=>a+out[s.key].length,0);
     if(!total && !errs.length){ box.innerHTML = impMsg("amber","No data rows found on any sheet."); return; }
@@ -3511,13 +3590,25 @@ async function commitBulk(){
 
   (d.Employees||[]).forEach(o=>{
     const id = o.EmployeeID;
-    const rec = Object.assign(DB.employees[id]||{}, {
-      id, name:o.FullName, email:o.WorkEmail||"", fn:o.Function, sub:o.SubFunction,
-      desig:o.Designation, lvl:Number(o.Level)||0, mgr:o.ManagerID||null,
-      mentorId:o.MentorID||"", hipot:/^y$/i.test(o["HiPot (Y/N)"]||""),
-      hcat:o.HiPotCategory||"", loc:o.Location||"", role:o.PortalRole||"Employee",
-      f360Url:o.Feedback360URL||"", insightUrl:o.ExpertInsightsURL||"",
-      evpUrl:o.EVPURL||"", projUrl:o.ProjectFeedbackURL||""
+    const prev = DB.employees[id] || {};
+    /* a column that wasn't on the sheet must not wipe what's already on record —
+       blank means "leave it alone", not "clear it" */
+    const keep = (v, was, dflt) => { const s=String(v==null?"":v).trim();
+                                     return s !== "" ? v : (was!==undefined && was!=="" ? was : dflt); };
+    const hipotCell = String(o["HiPot (Y/N)"]||"").trim();
+    const rec = Object.assign({}, prev, {
+      id, name:o.FullName, email:keep(o.WorkEmail, prev.email, ""),
+      fn:keep(o.Function, prev.fn, ""), sub:keep(o.SubFunction, prev.sub, ""),
+      desig:o.Designation, lvl:Number(o.Level)||0,
+      mgr:keep(o.ManagerID, prev.mgr, null),
+      mentorId:keep(o.MentorID, prev.mentorId, ""),
+      hipot: hipotCell ? /^y$/i.test(hipotCell) : !!prev.hipot,
+      hcat:keep(o.HiPotCategory, prev.hcat, ""), loc:keep(o.Location, prev.loc, ""),
+      role:keep(o.PortalRole, prev.role, "Employee"),
+      f360Url:keep(o.Feedback360URL, prev.f360Url, ""),
+      insightUrl:keep(o.ExpertInsightsURL, prev.insightUrl, ""),
+      evpUrl:keep(o.EVPURL, prev.evpUrl, ""),
+      projUrl:keep(o.ProjectFeedbackURL, prev.projUrl, "")
     });
     DB.employees[id] = rec;
     push(o._new ? "EmployeesNew" : "Employees", id,
@@ -4064,7 +4155,7 @@ function signOut(){
        {"table":"Career","key":"CR-001","fields":{...}}     -> writes one row
    Build steps: TalentPortal_PowerAutomate_Setup.md
    ========================================================================== */
-const FLOW_URL = "https://defaultb9d69197ce1f49079545b307af2335.e9.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/15/workflows/7ecf97401826423c86f275364ed91c21/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rWJgwxv91JZfS_eedf18bA82tXUnqNaLaxMA2Wkubag";   // <-- paste the HTTP POST URL of your one flow
+const FLOW_URL = "https://defaultb9d69197ce1f49079545b307af2335.e9.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/27/workflows/f0535a3a118a43d99aa7601523b210c4/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=TAYnABneSZMQntKduZ6dWO05c9_z0OdluvcIOcp-i84";   // <-- paste the HTTP POST URL of your one flow
 
 const SYNC_ON   = () => !!FLOW_URL;
 const truthy    = v => String(v).trim().toUpperCase() === "TRUE";
