@@ -3471,7 +3471,17 @@ function laForm(id, preset){
 function afterLaSave(){
   const back = _evpReturnTo;
   _evpReturnTo = null;
-  if(back && typeof openEvpPage === "function"){ ACTOR = back; openEvpPage(); return; }
+  if(!back){ render(); return; }
+
+  /* A mentor raising an action on a mentee's check-in has to go back through
+     openMenteeEvp, not openEvpPage. openEvpPage leaves ACTOR pointing at the
+     mentee, so the next nav render asked "who does the MENTEE mentor?" and
+     showed an empty My mentees. openMenteeEvp keeps the mentor's own seat in
+     _mentorReturn so Back restores it. */
+  const viewingSomeoneElse =
+    (typeof CURRENT_EMP !== "undefined" && CURRENT_EMP && CURRENT_EMP !== back);
+  if(viewingSomeoneElse && typeof openMenteeEvp === "function"){ openMenteeEvp(back); return; }
+  if(typeof openEvpPage === "function"){ ACTOR = back; openEvpPage(); return; }
   render();
 }
 
