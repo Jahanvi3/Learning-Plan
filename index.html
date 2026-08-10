@@ -291,7 +291,7 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
 .lb-sync .sp{flex:0 0 auto;width:13px;height:13px;border-radius:50%;
   border:2px solid var(--line2);border-top-color:var(--yellow-d);animation:lbspin .7s linear infinite}
 @keyframes lbspin{to{transform:rotate(360deg)}}
-.stickybar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
+.stickybar{position:sticky;top:var(--pheadH,72px);z-index:25;display:flex;align-items:center;justify-content:space-between;
   gap:14px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:11px;
   padding:11px 15px;margin-bottom:14px;box-shadow:0 2px 10px rgba(20,18,19,.06)}
 .sbtxt{font-size:13px;font-weight:600;color:var(--t1)}
@@ -6413,6 +6413,18 @@ syncPill();
   if(!ph) return;
   const mark = () => ph.classList.toggle("stuck", window.scrollY > 4);
   window.addEventListener("scroll", mark, {passive:true});
+  /* publish the header's real height so anything else that sticks can clear it
+     rather than guessing - it changes with viewport width and wrapping */
+  /* measured once at boot came back 0, because the login overlay is up and the
+     header has no height yet - watch it instead so it stays right after login,
+     on resize, and whenever the title wraps to two lines */
+  const measure = () => {
+    const h = Math.round(ph.getBoundingClientRect().height);
+    if(h > 0) document.documentElement.style.setProperty("--pheadH", h + "px");
+  };
+  window.addEventListener("resize", measure, {passive:true});
+  if(window.ResizeObserver){ new ResizeObserver(measure).observe(ph); }
+  measure();
   mark();
 })();
 if(SYNC_ON()){
