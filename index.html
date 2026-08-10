@@ -5153,11 +5153,19 @@ function aiList(eid, items, src, withAction){
    if none of the employee's name parts appear in it, the file on record belongs
    to someone else. Showing one person's feedback under another's name is the
    worst thing this page could do, so it stops rather than guesses. */
+/* Does this brief actually describe this person? Guards against a summary being
+   filed under the wrong name. Briefs often use a short form - "Tim" for Timothy
+   Butler - so a plain substring test wrongly rejected real summaries. A word in
+   the text counts as a match if it's a prefix of a name part, or vice versa,
+   which catches Tim/Timothy and Raj/Rajat without matching unrelated words. */
 function aiSubjectMatches(eid, a){
-  const parts = String(nm(eid)||"").toLowerCase().split(/\s+/).filter(x=>x.length>2);
+  const parts = String(nm(eid)||"").toLowerCase().split(/\s+/)
+    .map(x=>x.replace(/[^a-z]/g,"")).filter(x=>x.length>2);
   if(!parts.length || !a || !a.exec) return true;
   const t = String(a.exec).toLowerCase();
-  return parts.some(x=>t.indexOf(x) !== -1);
+  if(parts.some(x=>t.indexOf(x) !== -1)) return true;          // full name appears
+  const words = t.slice(0, 400).match(/[a-z]{3,}/g) || [];     // the subject is named early
+  return parts.some(p => words.some(wd => p.indexOf(wd) === 0 || wd.indexOf(p) === 0));
 }
 
 function vAiSummary(){
