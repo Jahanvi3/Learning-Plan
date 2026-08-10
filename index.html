@@ -284,6 +284,25 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
 .init .st{justify-self:end}
 .stsel{padding:7px 10px;font-size:12.5px;min-width:130px}
 
+.lb-sync{display:flex;align-items:center;justify-content:center;gap:9px;text-align:center;
+  font-size:12.5px;line-height:1.5;color:var(--t2);background:var(--bg2);border:1px solid var(--line);
+  border-radius:9px;padding:11px 14px;margin-top:16px}
+.lb-sync.done{display:none}
+.lb-sync .sp{flex:0 0 auto;width:13px;height:13px;border-radius:50%;
+  border:2px solid var(--line2);border-top-color:var(--yellow-d);animation:lbspin .7s linear infinite}
+@keyframes lbspin{to{transform:rotate(360deg)}}
+.stickybar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
+  gap:14px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:11px;
+  padding:11px 15px;margin-bottom:14px;box-shadow:0 2px 10px rgba(20,18,19,.06)}
+.sbtxt{font-size:13px;font-weight:600;color:var(--t1)}
+.sbtxt span{display:block;font-size:12px;font-weight:400;color:var(--t3);margin-top:2px}
+@media(max-width:560px){ .stickybar{position:static} }
+.qfilter{display:inline-flex;border:1px solid var(--line2);border-radius:50px;overflow:hidden}
+.qf{background:none;border:none;cursor:pointer;font:inherit;font-size:11.5px;font-weight:600;
+  letter-spacing:.04em;padding:6px 13px;color:var(--t2);white-space:nowrap}
+.qf+.qf{border-left:1px solid var(--line2)}
+.qf:hover{color:var(--violet)}
+.qf.on{background:var(--violet);color:#fff}
 .cbtn{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;background:none;cursor:pointer;
   border:1px solid var(--line2);border-radius:50px;padding:6px 9px;color:var(--t3);font:inherit;
   transition:color .12s,border-color .12s}
@@ -845,6 +864,10 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
       </div>
     </div>
     <div class="lb-demo">
+      <div class="lb-sync" id="dirSync">
+        <span class="sp"></span>
+        <span id="dirSyncTxt">Please wait a few seconds while the database syncs…</span>
+      </div>
       <div class="lb-note" id="dirNote">Loading the employee directory\u2026</div>
     </div>
   </div>
@@ -1836,7 +1859,7 @@ function evpBody(eid){
       </div>`
     : `<div class="note" style="margin-bottom:13px"><span class="ti ti-check" style="font-size:14px"></span> Nothing flagged this cycle \u2014 no pillar was both important and rated low.</div>`;
 
-  return head + flagCard + `<div class="card">
+  return stickyActionBar(eid, "the EVP check-in", "EVP check-in") + head + flagCard + `<div class="card">
     <h2 style="margin:0">Your responses, priority first</h2>
     <p class="hint">Rank 1 is what matters most to you right now. Visible to you, HR and your mentor.</p>
     <table class="tbl"><thead><tr>
@@ -2549,6 +2572,13 @@ function vCareer(){
           ${canEditMile?`<button class="btn sm" onclick="editMilestone()"><span class="ti ti-pencil" style="font-size:13px"></span>Edit</button>`:""}
         </h2><p class="hint">Agreed with your manager.</p>
           <div class="serif" style="font-size:21px;font-weight:600">${c.next}</div></div>
+        <div class="card"><h2 style="display:flex;align-items:center;justify-content:space-between">Focus Brief
+          ${canEditMile?`<button class="btn sm" onclick="editBrief()"><span class="ti ti-pencil" style="font-size:13px"></span>Edit</button>`:""}
+        </h2><p class="hint">What to concentrate on to get there.</p>
+          ${c.brief
+            ? `<div class="briefbody">${String(c.brief).replace(/</g,"&lt;").replace(/\n/g,"<br>")}</div>`
+            : `<div class="briefempty">${canEditMile?"Nothing written yet \u2014 use Edit to add the brief.":"No brief written yet."}</div>`}
+        </div>
         ${canSeeReadiness()?`<div class="card" style="margin-bottom:0"><h2 style="display:flex;align-items:center;justify-content:space-between">Readiness
           ${canEditRead?`<button class="btn sm" onclick="editReadiness()"><span class="ti ti-pencil" style="font-size:13px"></span>Edit</button>`:""}
         </h2>
@@ -2927,6 +2957,11 @@ function postComment(eid, anchor, label){
   toast("Comment added");
 }
 
+/* Quarter filter for the targets list. Kept in a variable rather than the URL
+   so it resets on reload - it's a way to read the page, not a saved view. */
+let HP_QFILTER = "";
+function setHpQuarter(q){ HP_QFILTER = q || ""; render(); }
+
 function hipotBody(eid){
   const ts = targetsOf(eid).map(normTarget);
   const mine = canEditOwnTarget(eid);
@@ -2935,8 +2970,15 @@ function hipotBody(eid){
   const cell = v => v ? String(v).replace(/</g,"&lt;") : '<span style="color:var(--t3)">\u2014</span>';
 
   /* group the initiative rows back under their OKR, in plan order */
+  /* quarters actually present on this plan, in the order the year runs */
+  const QORDER = ["JAS 26","OND 26","JFM 27"];
+  const quarters = Array.from(new Set(ts.map(t=>t.timeline).filter(Boolean)))
+    .sort((a,b)=>{ const i=QORDER.indexOf(a), j=QORDER.indexOf(b);
+      return (i<0?99:i)-(j<0?99:j) || String(a).localeCompare(String(b)); });
+  const shown = HP_QFILTER ? ts.filter(t=>t.timeline===HP_QFILTER) : ts;
+
   const order = [], byOkr = {};
-  ts.forEach(t=>{
+  shown.forEach(t=>{
     /* Excel rows have no okrIdx, so fall back to the index baked into the
        target id (HP-<plan>-<okr>-<initiative>), then to the name. */
     let ix = t.okrIdx;
@@ -2998,15 +3040,23 @@ function hipotBody(eid){
   }).join("");
 
   return `${hipotPlanCard(eid)}
-    <div class="card"><h2 style="display:flex;align-items:center;justify-content:space-between;margin:0">HiPot targets
-        ${mine?`<button class="btn sm pri" onclick="targetForm('${eid}',null)"><span class="ti ti-plus" style="font-size:13px"></span>Add initiative</button>`:""}
+    <div class="card"><h2 style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0">HiPot targets
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          ${quarters.length>1?`<div class="qfilter">
+            <button class="qf${HP_QFILTER?"":" on"}" onclick="setHpQuarter('')">All</button>
+            ${quarters.map(q=>`<button class="qf${HP_QFILTER===q?" on":""}" onclick="setHpQuarter('${q}')">${escH(q)}</button>`).join("")}
+          </div>`:""}
+          ${mine?`<button class="btn sm pri" onclick="targetForm('${eid}',null)"><span class="ti ti-plus" style="font-size:13px"></span>Add initiative</button>`:""}
+        </div>
       </h2>
       <p class="hint">${mine
         ? "Admin view \u2014 you can edit every field."
         : canSet
           ? "The plan is set centrally. Set a status on each initiative \u2014 the target above rolls up on its own \u2014 and use comments to talk it through."
           : "Read-only."}</p>
-      ${cards || '<div class="note">No initiatives yet.</div>'}</div>`;
+      ${cards || (HP_QFILTER
+        ? `<div class="note">Nothing scheduled for <b>${escH(HP_QFILTER)}</b>. <a href="#" onclick="setHpQuarter('');return false">Show all quarters</a>.</div>`
+        : '<div class="note">No initiatives yet.</div>')}</div>`;
 }
 
 function targetForm(eid, tid){
@@ -3462,7 +3512,7 @@ function vMentees(){
       <td style="text-align:right"><button class="btn sm pri" onclick="openMenteeLearning('${eid}')"><span class="ti ti-edit" style="font-size:13px"></span>Development plan</button></td></tr>`;
   }).join("");
   return `<div class="card"><h2>My mentees</h2><p class="hint">One plan per person \u2014 career milestone, HiPot targets and development actions are all on it. Changes are logged and visible to the mentee.</p>
-    <table class="tbl"><thead><tr><th>Mentee</th><th>Current role</th><th>Next role</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    <table class="tbl"><thead><tr><th>Mentee</th><th>Current role</th><th>Next milestone</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 /* mentor edits mentee readiness inline -> reflected to mentee + logged */
 function mentorSetReadiness(eid,val){
@@ -3633,7 +3683,7 @@ function vHipots(){
   const p=scopedPeople().filter(e=>e.hipot);
   if(!p.length)return `<div class="empty"><div class="ei ti ti-rocket"></div><h3>No HiPots in scope</h3></div>`;
   return `<div class="card"><h2>HiPots in your scope <span class="pill p-violet">${p.length}</span></h2><p class="hint">Each with their live targets and readiness.</p>
-    <table class="tbl"><thead><tr><th>Person</th><th>Category</th><th>Next role</th><th>Readiness</th><th>Targets</th></tr></thead><tbody>
+    <table class="tbl"><thead><tr><th>Person</th><th>Category</th><th>Next milestone</th><th>Readiness</th><th>Targets</th></tr></thead><tbody>
     ${p.map(e=>{const c=curPath(e.id);const ts=targetsOf(e.id);const done=ts.filter(t=>t.status==="Achieved").length;
       return `<tr><td><div class="who"><span class="av">${initials(e.name)}</span><div><div style="font-weight:500">${e.name}</div><div style="font-size:11.5px;color:var(--t3)">${e.desig}</div></div></div></td>
       <td><span class="pill p-violet">${e.hcat}</span></td><td>${c?c.next:"—"}</td>
@@ -3665,7 +3715,7 @@ function vNextRoles(){
     <td>${c?`<span class="pill p-${rdColor(c.readiness)}">${c.readiness}</span>`:"—"}</td>
     <td style="font-size:12.5px;color:var(--t2)">${c?c.milestone:"—"}</td></tr>`;}).join("");
   return `<div class="card"><h2>Where your team is heading</h2><p class="hint">Next role and readiness for everyone in scope.</p>
-    <table class="tbl"><thead><tr><th>Person</th><th>Next role</th><th>Readiness</th><th>Milestone</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    <table class="tbl"><thead><tr><th>Person</th><th>Next milestone</th><th>Readiness</th><th>Milestone</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 /* ============ HR ADMIN VIEWS ============ */
@@ -3725,6 +3775,7 @@ function vMaster(){
   return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px">
       <h2 style="margin:0">Employee master data</h2>
       <div style="display:flex;gap:8px">
+        <button class="btn sm" onclick="exportMaster()"><span class="ti ti-download" style="font-size:13px"></span>Export master</button>
         <button class="btn sm" onclick="bulkAddEmp()"><span class="ti ti-file-upload" style="font-size:13px"></span>Bulk add</button>
         <button class="btn sm pri" onclick="editEmp('')"><span class="ti ti-plus" style="font-size:13px"></span>Add employee</button>
       </div></div>
@@ -3732,6 +3783,27 @@ function vMaster(){
     <table class="tbl"><thead><tr><th>Name</th><th>Designation</th><th>Function</th><th>Level</th><th>Mentor</th><th>HiPot</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="note">Changing someone's name, level or HiPot flag here updates them everywhere in the app instantly, because every module reads from this master.</div>`;
 }
+/* Export the master as CSV. Columns match the bulk-upload template exactly, so
+   the file can be edited and fed straight back in through Bulk add. Career
+   fields come from the person's selected path. */
+function exportMaster(){
+  const rows = Object.values(DB.employees).filter(e=>e.id!=="E-0001")
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  const head = ["EmployeeID","FullName","WorkEmail","Function","SubFunction","Designation",
+                "Level","ManagerID","MentorID","HiPot","HiPotCategory","Location","PortalRole",
+                "Next role","Focus Brief","Readiness"];
+  const csv = [head.join(",")].concat(rows.map(e=>{
+    const cp = (typeof curPath==="function" ? curPath(e.id) : null) || {};
+    return [e.id, e.name, e.email||"", e.fn||"", e.sub||"", e.desig||"", e.lvl==null?"":e.lvl,
+            e.mgr||"", mentorOfEmp(e.id)||"", e.hipot?"Y":"N", e.hcat||"", e.loc||"",
+            e.role||"Employee", cp.next||"", cp.brief||"", cp.readiness||""]
+      .map(v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`).join(",");
+  })).join("\n");
+  dl(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}),
+     "employee-master-"+today()+".csv");
+  toast("Exported "+rows.length+" people");
+}
+
 function mentorOfEmp(id){
   const p=(DB.pairings||[]).find(x=>x.mentee===id && x.status==="Active");
   return p ? p.mentor : ((DB.employees[id]||{}).mentorId || "");
@@ -4663,7 +4735,7 @@ function f360Body(eid){
       `<i class="${(x.mode||[]).indexOf(n)>=0?"md":(n>=x.lo&&n<=x.hi?"in":"")}"></i>`).join("")}</span>`;
   };
   const attrTable = Object.keys(cats).sort().map(c=>`
-    <tr><td colspan="${hasPeer?7:6}" class="cgrp">${escH(c)}</td></tr>
+    <tr><td colspan="${hasPeer?6:5}" class="cgrp">${escH(c)}</td></tr>
     ${cats[c].map(x=>{
       const g = gapOf(x);
       return `<tr>
@@ -4673,7 +4745,6 @@ function f360Body(eid){
         ${hasPeer?`<td class="mono" style="width:50px;text-align:center;color:var(--t2)">${x.peer==null?"\u2014":x.peer.toFixed(1)}</td>`:""}
         <td class="mono" style="width:50px;text-align:center;color:var(--t2)">${x.team==null?"\u2014":x.team.toFixed(1)}</td>
         <td class="mono" style="width:62px;text-align:center;color:${g==null?"var(--t3)":g>=0.25?"var(--jade)":g<=-0.25?"var(--violet)":"var(--t3)"}">${g==null?"\u2014":(g>0?"+":"")+g.toFixed(2)}</td>
-        <td style="width:64px;text-align:center">${strip(x)}</td>
       </tr>`;}).join("")}`).join("");
 
   /* The document plots every behaviour three times - once for the overall
@@ -4711,6 +4782,7 @@ function f360Body(eid){
     </tr>`).join("")}</tbody></table>`;
 
   return `${hero}
+    ${stickyActionBar(eid, "the 360 feedback report", "360 feedback report")}
 
     <div class="card"><h2>Greatest strengths</h2>
       <p class="hint">Top strengths based on cumulative ratings.</p>
@@ -4756,13 +4828,11 @@ function f360Body(eid){
     <div class="card"><h2>Attribute wise summary</h2>
       <p class="hint">Every score in one table. <b>Score</b> is the average of everyone.
         <b>Self</b>, <b>Peer</b> and <b>Team</b> are those groups on their own.
-        <b>Gap</b> is everyone else minus self \u2014 a plus means others scored it higher.
-        <b>Spread</b> shows which scores from 1 to 5 reviewers actually used, with the most common one filled in dark.</p>
+        <b>Gap</b> is everyone else minus self \u2014 a plus means others scored it higher.</p>
       <table class="tbl f360tab"><thead><tr>
         <th>Behaviour</th><th style="text-align:center">Score</th>
         <th style="text-align:center">Self</th>${hasPeer?'<th style="text-align:center">Peer</th>':""}
         <th style="text-align:center">Team</th><th style="text-align:center">Gap</th>
-        <th style="text-align:center">Spread</th>
       </tr></thead><tbody>${attrTable}</tbody></table>
       <div class="note" style="margin-top:12px">5 Role model \u00b7 4 Strong \u00b7 3 Moderate \u00b7 2 Limited \u00b7 1 No demonstration</div>
     </div>
@@ -4847,6 +4917,21 @@ function sectionActionBtn(eid, section, src){
   const safe = String(section).replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;");
   return `<button class="btn sm pri nowrap" onclick="raiseAction('${eid}','${safe}','${src}')">
     <span class="ti ti-plus" style="font-size:13px"></span>Create action</button>`;
+}
+
+/* Reports run several screens long and the Create action buttons live inside
+   individual sections, so by the time you've read to the bottom there's nothing
+   to press. This bar sticks to the top of the report and raises an action for
+   the report as a whole. */
+function stickyActionBar(eid, src, label){
+  if(!canRaiseAction(eid)) return "";
+  const safe = String(label).replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;");
+  return `<div class="stickybar">
+    <div class="sbtxt">Anything here worth acting on?
+      <span>Raise it into ${escH(nm(eid))}'s development plan.</span></div>
+    <button class="btn sm pri nowrap" onclick="raiseAction('${eid}','${safe}','${src}')">
+      <span class="ti ti-plus" style="font-size:13px"></span>Add development action</button>
+  </div>`;
 }
 
 function actionBtn(eid, label, src){
@@ -5029,6 +5114,7 @@ function vAiSummary(){
      key development opportunities -> hidden strengths & blind spots ->
      top 3 development priorities -> development plan. */
   return `${hero}
+    ${stickyActionBar(eid, "the AI 360 summary", "AI 360 summary")}
 
     <div class="card"><h2>Executive summary</h2>
       <p class="ailead">${escH(a.exec)}</p></div>
@@ -5557,7 +5643,8 @@ function showSyncLog(){
       <td>${x.ok?'<span class="pill p-jade">OK</span>':'<span class="pill p-rust">FAILED</span>'}${x.err?"<div style='font-size:11px;color:var(--t2);margin-top:3px'>"+String(x.err).replace(/</g,"&lt;")+"</div>":""}</td>
     </tr>`).join("");
   const counts = READ_COUNTS
-    ? `<div class="note" style="margin-bottom:12px"><b>Last READ returned:</b> ${
+    ? `<div class="note" style="margin-bottom:12px"><b>Last READ took ${
+        LAST_READ_MS==null?"\u2014":(LAST_READ_MS/1000).toFixed(1)+" seconds"} and returned:</b> ${
         Object.keys(READ_COUNTS).map(k=>`${k} <b>${READ_COUNTS[k]}</b>`).join(" \u00b7 ")
       }<div style="margin-top:7px;color:var(--t2)">A table showing 0 is empty in the workbook \u2014 that page will look blank, and that's the workbook, not the sync.</div></div>`
     : '<div class="note" style="margin-bottom:12px">No READ has completed yet.</div>';
@@ -5603,13 +5690,21 @@ let _READ_CACHE = null, _READ_AT = 0;
    older than a day is thrown away rather than shown.
    --------------------------------------------------------------------------- */
 const SNAP_KEY = "tp.read.snapshot";
-const SNAP_MAX_AGE = 24*60*60*1000;
+const SNAP_MAX_AGE = 7*24*60*60*1000;
+/* localStorage, not sessionStorage: sessionStorage is wiped when the tab
+   closes, so every fresh visit paid the full round-trip again. This keeps the
+   last good read across restarts, and it's refreshed behind the user anyway. */
+const SNAP_STORE = (function(){
+  try{ const t="tp.t"; window.localStorage.setItem(t,"1"); window.localStorage.removeItem(t);
+       return window.localStorage; }
+  catch(e){ try{ return window.sessionStorage; }catch(e2){ return null; } }
+})();
 let _SNAP_MEM = null;
 
 function readStoredSnapshot(){
   if(_SNAP_MEM && (Date.now() - _SNAP_MEM.at) < SNAP_MAX_AGE) return _SNAP_MEM;
   try{
-    const raw = window.sessionStorage && sessionStorage.getItem(SNAP_KEY);
+    const raw = SNAP_STORE && SNAP_STORE.getItem(SNAP_KEY);
     if(!raw) return null;
     const snap = JSON.parse(raw);
     if(!snap || !snap.payload || (Date.now() - snap.at) > SNAP_MAX_AGE) return null;
@@ -5620,13 +5715,20 @@ function readStoredSnapshot(){
 function writeStoredSnapshot(payload){
   const snap = { at: Date.now(), payload: payload };
   _SNAP_MEM = snap;
-  try{ if(window.sessionStorage) sessionStorage.setItem(SNAP_KEY, JSON.stringify(snap)); }
-  catch(e){ /* quota or blocked - the in-memory copy still helps this tab */ }
+  try{ if(SNAP_STORE) SNAP_STORE.setItem(SNAP_KEY, JSON.stringify(snap)); }
+  catch(e){
+    /* over quota - drop the two biggest history tables and retry, since a
+       partial snapshot still beats a blank page */
+    try{
+      const slim = Object.assign({}, payload, {comments:[], actions:[]});
+      SNAP_STORE.setItem(SNAP_KEY, JSON.stringify({at:snap.at, payload:slim, slim:true}));
+    }catch(e2){ /* in-memory copy still helps this tab */ }
+  }
 }
 
 /* Row counts from the last READ, so "nothing on this page" can be told apart
    from "the sync failed". Surfaced on the pill and in the sync log. */
-let READ_COUNTS = null;
+let READ_COUNTS = null, LAST_READ_MS = null;
 
 async function loadFromExcel(manual){
   if(!SYNC_ON()){ SYNC_STATE="off"; syncPill(); return; }
@@ -5634,7 +5736,7 @@ async function loadFromExcel(manual){
      workbook). Reuse the payload from the last 45 seconds unless the user
      explicitly refreshed via the pill — sign-in right after page load then
      re-maps the already-fetched data instantly instead of fetching twice. */
-  const fresh = _READ_CACHE && (Date.now() - _READ_AT < 45000);
+  const fresh = _READ_CACHE && (Date.now() - _READ_AT < 300000);
   if(fresh && !manual){
     try{ applyReadPayload(_READ_CACHE); }catch(e){ console.error("[sync] cached apply failed", e); }
     return;
@@ -5650,13 +5752,36 @@ async function loadFromExcel(manual){
       try{
         applyReadPayload(stored.payload);
         SYNC_STATE = "stale"; syncPill();
+        /* the directory is the only thing sign-in needs, and it's in the
+           snapshot - so open the form now rather than after the round-trip */
+        if(Object.keys(DB.employees||{}).length){
+          DIRECTORY_READY = true;
+          if(typeof dirNote==="function") dirNote("Use the work email on your HR record.");
+          if(typeof dirSync==="function") dirSync("refreshing");
+        }
       }catch(e){ console.error("[sync] stored apply failed", e); }
     }
   }
 
   SYNC_STATE = (SYNC_STATE === "stale") ? "stale" : "loading"; syncPill();
+  const _t0 = Date.now();
+  /* count up while we wait - a pill that never changes reads as hung */
+  clearInterval(window._syncTick);
+  window._syncTick = setInterval(()=>{
+    if(SYNC_STATE!=="loading" && SYNC_STATE!=="stale"){ clearInterval(window._syncTick); return; }
+    const el = document.getElementById("syncPill"); if(!el) return;
+    const secs = Math.round((Date.now()-_t0)/1000);
+    if(typeof dirSync==="function" && !DIRECTORY_READY) dirSync("waiting", secs);
+    if(secs < 2) return;
+    const d7 = '<span style="width:7px;height:7px;border-radius:50%;background:#D18700;display:inline-block"></span>';
+    el.innerHTML = d7 + (SYNC_STATE==="stale"
+      ? "Showing last saved \u00b7 refreshing\u2026 " + secs + "s"
+      : "Syncing with Excel\u2026 " + secs + "s");
+  }, 1000);
   try{
     const d = await callFlow({ table:"READ" });
+    LAST_READ_MS = Date.now() - _t0;
+    clearInterval(window._syncTick);
     _READ_CACHE = d; _READ_AT = Date.now();
     applyReadPayload(d);
     writeStoredSnapshot(d);
@@ -5669,7 +5794,7 @@ async function loadFromExcel(manual){
      "certifications","permissions","config","evpCycles","evpResponses"]
       .forEach(k => READ_COUNTS[k] = Array.isArray(d[k]) ? d[k].length : 0);
     SYNC_LOG.push({ t:new Date().toTimeString().slice(0,8), table:"READ", ok:true,
-      key:Object.keys(READ_COUNTS).map(k=>k+" "+READ_COUNTS[k]).join(", ") });
+      key:(LAST_READ_MS/1000).toFixed(1)+"s \u00b7 "+Object.keys(READ_COUNTS).map(k=>k+" "+READ_COUNTS[k]).join(", ") });
     if(SYNC_LOG.length > 100) SYNC_LOG.shift();
 
     const anyRows = Object.keys(READ_COUNTS).some(k=>READ_COUNTS[k] > 0);
@@ -5678,6 +5803,7 @@ async function loadFromExcel(manual){
       if(manual) toast("The flow replied, but every table was empty");
       return;
     }
+    if(typeof dirSync==="function") dirSync("done");
     if(manual) toast("Refreshed from Excel");
     return;
   }catch(err){
@@ -6128,6 +6254,24 @@ function dirNote(txt){
   if(el) el.textContent = txt;
 }
 
+/* The first sync takes a while against Excel, so say so plainly rather than
+   leaving people looking at a form that rejects them. Hidden once data is in. */
+function dirSync(state, secs){
+  const box = document.getElementById("dirSync");
+  const txt = document.getElementById("dirSyncTxt");
+  if(!box || !txt) return;
+  if(state === "done"){ box.classList.add("done"); return; }
+  box.classList.remove("done");
+  txt.textContent = state === "refreshing"
+    ? "You can sign in now \u2014 still refreshing in the background."
+    : "Please wait a few seconds while the database syncs\u2026"
+      + (secs > 3 ? " (" + secs + "s)" : "");
+  if(state === "refreshing"){
+    const sp = box.querySelector(".sp");
+    if(sp) sp.style.borderTopColor = "var(--jade)";
+  }
+}
+
 /* match on WorkEmail from the Employees sheet, case- and space-insensitive */
 function findByEmail(raw){
   const e = String(raw||"").trim().toLowerCase();
@@ -6248,7 +6392,15 @@ function completeLogin(id, emp){
   if(!IS_ADMIN) ACTOR = id;
   setRole(land);
   updateBackBtn();
-  loadFromExcel(false);   // reload so row-level visibility applies for this role
+  /* Row-level visibility is applied client-side from data we already hold, so
+     re-reading the whole workbook here was a second full round-trip for nothing.
+     Re-apply what's cached; only go back to Excel if there's genuinely nothing. */
+  if(_READ_CACHE){
+    try{ applyReadPayload(_READ_CACHE); render(); }
+    catch(e){ console.error("[sync] re-apply failed", e); loadFromExcel(false); }
+  } else {
+    loadFromExcel(false);
+  }
 }
 
 /* the directory has to exist before anyone can sign in, so pull it up front */
