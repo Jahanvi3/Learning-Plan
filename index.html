@@ -297,6 +297,65 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
 .sbtxt{font-size:13px;font-weight:600;color:var(--t1)}
 .sbtxt span{display:block;font-size:12px;font-weight:400;color:var(--t3);margin-top:2px}
 @media(max-width:560px){ .stickybar{position:static} }
+/* HiPot mentees need to be findable at a glance in a long list, so the whole
+   row is tinted and the left edge marked - a small icon alone gets lost. */
+/* EVP pillar cards */
+.evptag{font-size:10.5px;font-weight:600;letter-spacing:.04em;color:var(--violet);margin-top:5px;line-height:1.35}
+.choosewrap{display:flex;flex-direction:column;gap:10px;margin:14px 0 4px}
+.choose{text-align:left;font:inherit;cursor:pointer;background:var(--card);
+  border:1px solid var(--line2);border-radius:11px;padding:15px 17px;transition:.15s}
+.choose:hover{border-color:var(--violet);background:var(--violetbg)}
+.choose b{display:block;font-size:14px;margin-bottom:4px}
+.choose span{display:block;font-size:12.5px;color:var(--t2);line-height:1.55}
+.evpc-head{margin-bottom:14px}
+.evpc{background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:13px 16px;margin-bottom:8px}
+.evpc:last-child{margin-bottom:0}
+.evpc.evpc-flag{border-color:#E3B4A8;background:#FDF8F6}
+.evpc-h{display:flex;gap:13px;align-items:center}
+.evpc-rk{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--violetbg);
+  display:flex;align-items:center;justify-content:center}
+.evpc-rk b{font-size:12.5px;font-weight:700;color:var(--violet);line-height:1}
+.evpc-rk span{display:none}
+.evpc-t{flex:1;min-width:0}
+.evpc-t h3{font-size:14px;font-weight:600;margin:0;line-height:1.3;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.evpc-t p{font-size:11.5px;color:var(--t3);line-height:1.4;margin:2px 0 0}
+.evpc-s{flex:0 0 auto;display:flex;align-items:center;gap:9px}
+.evpc-s .n{font-size:15px;font-weight:700;line-height:1;white-space:nowrap}
+.evpc-s .n em{font-style:normal;font-size:11px;color:var(--t3);font-weight:400}
+.evpc-s .g{width:64px;height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+.evpc-s .g i{display:block;height:100%;border-radius:3px}
+.evpc-s span{display:none}
+.evpc-act{margin:9px 0 0 39px;padding-top:9px;border-top:1px dashed var(--line)}
+.evpc-q{margin:9px 0 0 39px;padding:0 0 0 12px;border-left:2px solid var(--line2);
+  font-size:12.5px;line-height:1.55;color:var(--t2)}
+.evpc .evpcm{margin-left:39px;margin-top:8px;padding-top:8px}
+@media(max-width:720px){
+  .evpc-h{flex-wrap:wrap}
+  .evpc-s{flex:1 0 100%}
+  .evpc-s .g{flex:1}
+  .evpc-q,.evpc-act{margin-left:0}
+}
+.evpown{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.evpown:last-child{margin-bottom:0}
+.evpown .t{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.evpown .w{flex:1;min-width:200px;font-size:14px;font-weight:600;line-height:1.4}
+.evpown .m{font-size:11.5px;color:var(--t3);margin-top:6px}
+.evpown .y{font-size:12.5px;color:var(--t2);line-height:1.55;margin-top:7px}
+.evpown .a{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px;
+  padding-top:11px;border-top:1px solid var(--line)}
+.evpcm{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line)}
+.evpcmrow{display:flex;gap:9px;align-items:flex-start;padding:6px 0}
+.evpcmrow .b{flex:1;min-width:0}
+.evpcmrow .w{font-size:12.5px;line-height:1.5;color:var(--t1);font-weight:500}
+.evpcmrow .m{font-size:11px;color:var(--t3);margin-top:2px}
+.evpadd{margin-top:4px;font-size:11.5px}
+.hipbadge{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.11em;
+  background:var(--violet);color:#fff;border-radius:4px;padding:3px 7px;white-space:nowrap}
+.hiprow > td{background:var(--violetbg)}
+.hiprow > td:first-child{box-shadow:inset 3px 0 0 var(--violet)}
+.av.avhip{background:var(--violet);color:#fff}
 .qfilter{display:inline-flex;border:1px solid var(--line2);border-radius:50px;overflow:hidden}
 .qf{background:none;border:none;cursor:pointer;font:inherit;font-size:11.5px;font-weight:600;
   letter-spacing:.04em;padding:6px 13px;color:var(--t2);white-space:nowrap}
@@ -1788,6 +1847,65 @@ function openEvpPage(){
   updateBackBtn();
 }
 
+/* ============ EVP COMMITMENTS ============
+   Kept apart from development actions on purpose. A development action is about
+   growing a person; an EVP commitment is about fixing something in their working
+   conditions - pay clarity, workload, tooling. Different owner, different shape,
+   so it gets its own store and its own form rather than being squeezed into the
+   70:20:10 model, where it never fitted. */
+
+function canEditEvpAct(eid){
+  if(!isEditable("evp.responses") && !isEditable("learning.actions")) return false;
+  const lp = DB.learningPlans[eid];
+  const isTheirMentor = !!(lp && typeof CURRENT_EMP!=="undefined" && lp.mentor===CURRENT_EMP);
+  return IS_ADMIN || isTheirMentor || eid===CURRENT_EMP;
+}
+
+/* Every commitment owned by this person, whoever's EVP it came from. Owning
+   one is real work, so it belongs on the owner's own plan - not buried in
+   someone else's check-in where they'd never see it. */
+function pillarName(k){ const p=(EVP_PILLARS||[]).find(x=>x.k===k); return p?p.name:k; }
+
+/* Two very different things get raised off an EVP answer: a development goal
+   for the person, or a fix for something in their way. Ask first, because the
+   fields that make sense differ. Both land in the same development plan so
+   nothing is tracked in two places. */
+function evpAddPlan(eid, pillarKey){
+  if(!canEditEvpAct(eid)){ toast("You can't add to this plan."); return; }
+  const pn = pillarName(pillarKey);
+  document.getElementById("modalBody").innerHTML = `
+    <h3>Add action plan</h3>
+    <div class="sub">${escH(pn)} · ${escH(nm(eid))}</div>
+    <p class="hint" style="margin:0 0 4px">Does the mentee need to develop or learn something,
+      or is there a specific issue that needs to be resolved?</p>
+    <div class="choosewrap">
+      <button class="choose" onclick="evpChoose('${eid}','${pillarKey}','learn')">
+        <b>Development Action</b>
+        <span>Use this when the mentee needs to build a skill, gain experience, or prepare for
+          the next role. This will be added to the 70:20:10 Development Plan with timelines and
+          mentor support.</span>
+      </button>
+      <button class="choose" onclick="evpChoose('${eid}','${pillarKey}','fix')">
+        <b>Action to Resolve</b>
+        <span>Use this when something needs to be fixed, clarified, or unblocked. For example:
+          a career discussion, role clarity, access to an opportunity, or a process/policy issue.</span>
+      </button>
+    </div>
+    <div class="foot"><button class="btn" onclick="closeModal()">Cancel</button></div>`;
+  openModal();
+}
+
+function evpChoose(eid, pillarKey, kind){
+  const pn = pillarName(pillarKey);
+  ACTOR = eid;                       // the action belongs to them, not the viewer
+  _evpActionFrom = pn; _evpActionSrc = "the EVP check-in"; _pendingOrigin = "EVP";
+  _pendingKind = kind; _pendingPillar = pillarKey;
+  _evpReturnTo = eid;                // saveLA sends us back to the check-in
+  laForm(null, { _from: pn, _src: "the EVP check-in", _origin: "EVP",
+                 pillar: pillarKey, evpKind: kind,
+                 band: kind === "fix" ? "na" : "70" });
+}
+
 function evpBody(eid){
   const c = DB.evpCycle;
   if(!c) return `<div class="empty"><div class="ei ti ti-clipboard-off"></div><h3>No cycle open</h3><p>HR hasn't opened an EVP cycle yet.</p></div>`;
@@ -1803,7 +1921,7 @@ function evpBody(eid){
         <p class="hint" style="margin:0">Conducted ${fmtCertDate(c.conducted)} \u00b7 runs every six months \u00b7 next due ${fmtCertDate(c.nextDue)}${
           d && d.overdue ? " (overdue)" : d ? ` (in ${d.days} days)` : ""}</p></div>
       <div style="text-align:right">${r
-        ? `<span class="pill p-jade">Submitted ${fmtCertDate(r.on)}</span>`
+        ? `<span class="pill p-jade">Submitted ${fmtCertDate(cellDate(r.on))}</span>`
         : (d && d.overdue ? `<span class="pill p-rust">Overdue</span>` : `<span class="pill p-amber">Response due</span>`)}
         <div class="hdr-actions" style="margin-top:9px;justify-content:flex-end">
           ${(mine && r)?`<button class="btn sm nowrap" onclick="evpForm()">
@@ -1824,55 +1942,50 @@ function evpBody(eid){
   const lp = DB.learningPlans[eid];
   const isTheirMentor = !!(lp && typeof CURRENT_EMP!=="undefined" && lp.mentor===CURRENT_EMP);
   const canAct = isEditable("learning.actions") && (IS_ADMIN || isTheirMentor || eid===CURRENT_EMP);
-  const rows = ordered.map(p=>{
-    const rk = r.ranks[p.k]||0, s = r.sat[p.k]||0, cm = r.comments[p.k]||"";
-    const concern = evpIsConcern(rk,s);
-    return `<tr class="${concern?"evpconcern":""}">
-      <td style="text-align:center"><span class="evppri">${rk}</span></td>
-      <td style="min-width:170px"><div style="font-weight:600">${p.name}</div>
-        <div style="font-size:11.5px;color:var(--t3);line-height:1.45;margin-top:2px">${p.desc}</div></td>
-      <td style="min-width:130px">
-        <div class="evpbar" style="height:7px"><i style="width:${s*10}%;background:${s<=6?"var(--rust)":"var(--jade)"}"></i></div>
-        <div style="font-size:12px;font-weight:600;color:${s<=6?"var(--rust)":"var(--jade)"};margin-top:5px">${s}/10</div></td>
-      <td class="fbtxt" style="max-width:340px">${cm?esc(cm):'<span style="color:var(--t3)">\u2014</span>'}</td>
-      <td style="text-align:right">${concern?'<span class="pill p-rust nowrap">Worth a conversation</span>':""}</td>
-    </tr>`;}).join("");
+  /* One card per pillar rather than table rows. The comment runs to a paragraph
+     and each pillar carries its own commitments and button - a table column
+     squeezed all of that into a strip two words wide. */
+  const cards = ordered.map(p=>{
+    const rk = r.ranks[p.k]||0, sat = r.sat[p.k]||0, cm = r.comments[p.k]||"";
+    const concern = evpIsConcern(rk,sat);
+    const tone = sat<=4 ? "rust" : sat<=6 ? "amber" : "jade";
+    return `<div class="evpc ${concern?"evpc-flag":""}">
+      <div class="evpc-h">
+        <div class="evpc-rk"><b>${rk||"\u2014"}</b><span>priority</span></div>
+        <div class="evpc-t">
+          <h3>${p.name}${concern?'<span class="pill p-rust">Worth a conversation</span>':""}</h3>
+          <p>${p.desc}</p>
+        </div>
+        <div class="evpc-s">
+          <div class="n" style="color:var(--${tone})">${sat}<em>/10</em></div>
+          <div class="g"><i style="width:${sat*10}%;background:var(--${tone})"></i></div>
+          <span>satisfaction</span>
+        </div>
+      </div>
 
-  const flagCard = flags.length
-    ? `<div class="card" style="border-color:#E3B4A8;background:#FDF6F3">
-        <h2 style="margin:0;display:flex;align-items:center;gap:8px"><span class="ti ti-alert-triangle" style="color:var(--rust)"></span>
-          ${flags.length} area${flags.length>1?"s":""} worth a conversation</h2>
-        <p class="hint">Ranked in the top four for importance and rated 6 or below.</p>
-        ${flags.map(p=>`<div class="evpflagrow">
-          <div class="evpflaghead">
-            <div style="min-width:0">
-              <b>${p.name}</b>
-              <div class="evpchips">
-                <span class="pill p-violet">Priority ${r.ranks[p.k]} of 6</span>
-                <span class="pill p-rust">Satisfaction ${r.sat[p.k]} out of 10</span>
-              </div>
-            </div>
-            ${canAct?`<button class="btn sm pri nowrap" onclick="evpCreateAction('${eid}','${p.k}')">
-              <span class="ti ti-plus" style="font-size:13px"></span>Create action to improve</button>`:""}
-          </div>
-          ${r.comments[p.k]?`<div class="fbtxt" style="max-width:none;margin-top:7px">${esc(r.comments[p.k])}</div>`:""}</div>`).join("")}
-      </div>`
-    : `<div class="note" style="margin-bottom:13px"><span class="ti ti-check" style="font-size:14px"></span> Nothing flagged this cycle \u2014 no pillar was both important and rated low.</div>`;
+      ${cm ? `<blockquote class="evpc-q">${esc(cm)}</blockquote>` : ""}
 
-  return stickyActionBar(eid, "the EVP check-in", "EVP check-in") + head + flagCard + `<div class="card">
-    <h2 style="margin:0">Your responses, priority first</h2>
-    <p class="hint">Rank 1 is what matters most to you right now. Visible to you, HR and your mentor.</p>
-    <table class="tbl"><thead><tr>
-      <th style="width:64px;text-align:center">Priority<div style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--t3);font-size:10px">1 = highest</div></th><th>Pillar</th>
-      <th style="width:140px">Satisfaction<div style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--t3);font-size:10px">out of 10</div></th><th>Comment</th><th style="width:150px"></th>
-    </tr></thead><tbody>${rows}</tbody></table></div>`;
+      ${canEditEvpAct(eid) ? `<div class="evpc-act">
+        <button class="btn sm" onclick="evpAddPlan('${eid}','${p.k}')">
+          <span class="ti ti-plus" style="font-size:12px"></span>Add action plan</button>
+      </div>` : ""}
+
+    </div>`;
+  }).join("");
+
+  return head + `
+    <div class="evpc-head">
+      <div><h2 style="margin:0">Your responses, priority first</h2>
+        <p class="hint">Rank 1 is what matters most right now. Visible to you, HR and your mentor.</p></div>
+    </div>
+    ${cards}`;
 }
 
 /* Turn an EVP finding into a development action. Opens the same form as
    Add action, prefilled, and the saved action lands in this person's plan. */
 let _evpActionFrom = null, _evpActionSrc = null;
 /* Where the action being raised came from, read when the form is saved. */
-let _pendingOrigin = null;
+let _pendingOrigin = null, _pendingKind = null, _pendingPillar = null, _evpReturnTo = null;
 
 function evpCreateAction(eid, key){
   const p = EVP_PILLARS.find(x=>x.k===key); if(!p) return;
@@ -2199,6 +2312,9 @@ const BANDS={
     desc:"70% on the Job Experience: directly applying skills and knowledge in day-to-day work. This hands-on experience is crucial for deepening understanding and building competence. Maintained & tracked by the Mentee, reviewed by the Mentor."},
   "20":{label:"Mentorship / Coaching (20%)",short:"20% · Coaching",cls:"p-violet",owner:"Mentor",
     desc:"20% on Coaching and Mentoring: regular feedback, coaching and mentoring to enhance identified competencies. Maintained & tracked by the Mentor."},
+  "na":{label:"Not applicable — action item, not development",short:"Not applicable",cls:"p-grey",
+    owner:"Whoever picks it up",
+    desc:"Something to fix or unblock rather than something to learn. Raised off an EVP check-in and tracked in the plan so it isn't lost."},
   "10":{label:"L&D Trainings (10%)",short:"10% · Self-learning",cls:"p-amber",owner:"Mentee (with L&D team)",
     desc:"10% on Learning & Development: formal learning — courses, webinars, workshops, seminars — to keep expanding knowledge and staying relevant. Maintained & tracked by the Mentee in assistance with the L&D team."}
 };
@@ -2281,14 +2397,15 @@ function learningPlanTable(){
       : '<span class="pill p-grey">Draft</span>';
     const tl = a.timeline&&a.timeline.start ? `<span class="tlrange">${fmtRange(a.timeline.start,a.timeline.end)}</span>` : '<span style="color:var(--t3)">not set</span>';
     const stColor = a.update==="Achieved"?"p-jade":a.update==="Ongoing"?"p-amber":a.update==="Not started"?"p-grey":a.update==="On Hold"?"p-rust":"p-grey";
-    const statusTxt = a.update ? `<span class="pill ${stColor}">${a.update}</span>${a.comment?`<div style="font-size:11px;color:var(--t3);margin-top:4px">${a.comment}</div>`:""}` : '<span style="color:var(--t3)">—</span>';
+    const statusTxt = a.update ? `<span class="pill ${stColor}">${a.update}</span>` : '<span style="color:var(--t3)">—</span>';
     return `<tr>
       <td class="mono" style="width:40px;color:var(--t3);text-align:center;vertical-align:top;padding-top:13px">${i+1}</td>
       <td style="min-width:170px"><div style="font-weight:500">${a.priority?`<span class="pill ${a.priority==="1"?"p-rust":a.priority==="2"?"p-amber":"p-grey"}" style="margin-right:6px">P${a.priority}</span>`:""}${a.title}</div>${a.outcome?`<div style="font-size:11.5px;color:var(--t3);margin-top:3px">${String(a.outcome).replace(/</g,"&lt;")}</div>`:""}</td>
-      <td><span class="pill ${b.cls||'p-grey'}">${b.short||a.band}</span></td>
+      <td><span class="pill ${b.cls||'p-grey'}">${b.short||a.band}</span>
+        ${a.origin==="EVP"?`<div class="evptag">EVP${a.pillar?` · ${escH(pillarName(a.pillar))}`:""}</div>`:""}</td>
       <td class="tlcell">${tl}</td>
       <td style="min-width:150px;font-size:12.5px;color:var(--t2)">${statusTxt}</td>
-      <td class="actcell" style="white-space:nowrap">${canEdit?`<button class="btn sm" onclick="editLA('${a.id}')">Edit</button> <button class="btn sm" onclick="deleteLA('${a.id}')" title="Delete \u2014 moves to the archive">Delete</button>`:""}</td></tr>`;
+      <td class="actcell" style="white-space:nowrap">${laThreadBtn(ACTOR, a)}${canEdit?` <button class="btn sm" onclick="editLA('${a.id}')">Edit</button> <button class="btn sm" onclick="deleteLA('${a.id}')" title="Delete \u2014 moves to the archive">Delete</button>`:""}</td></tr>`;
   }).join("") : `<tr><td colspan="6"><div class="note">No development actions yet. ${canEdit?'Use "Add action" below to start building the plan with your mentor.':''}</div></td></tr>`;
 
   return `<div class="card">
@@ -2318,11 +2435,14 @@ function learningPlanTable(){
    translated on the way in. Validation is all-or-nothing: one bad row and the
    whole file is rejected, so a plan is never half-loaded.
    --------------------------------------------------------------------------- */
-const IMPORT_COLS = ["Action title","Band","Start date","End date","Status update","Comment"];
+const IMPORT_COLS = ["Action title","Band","Start date","End date","Status update",
+                     "Priority","Expected outcome","Comment"];
 const IMPORT_SAMPLE = [
-  ["Take ownership of 2 client accounts","70","2026-08-01","2026-12-31","Ongoing","Handover done"],
-  ["Fortnightly coaching with mentor","20","2026-08-01","2027-03-31","Not started",""],
-  ["Complete SHRM-CP foundations","10","2026-09-01","2026-11-30","Not started",""]
+  ["Take ownership of 2 client accounts","70","2026-08-01","2026-12-31","Ongoing",
+   "1","Running both accounts without escalation by Q3","Handover done"],
+  ["Fortnightly coaching with mentor","20","2026-08-01","2027-03-31","Not started",
+   "2","Confident leading a client conversation alone",""],
+  ["Complete SHRM-CP foundations","10","2026-09-01","2026-11-30","Not started","",""," "]
 ];
 let IMPORT_ROWS = null;
 
@@ -2336,7 +2456,7 @@ function importDialog(){
       <div class="impnum">1</div>
       <div>
         <b>Download the template</b>
-        <p>Six columns in the order the form expects, with three example rows and the
+        <p>Eight columns in the order the form expects, with three example rows and the
            allowed values noted on a second sheet. Dates must be <b>yyyy-mm-dd</b>.</p>
         <button class="btn sm" onclick="downloadTemplate()"><span class="ti ti-download" style="font-size:13px"></span>Download template</button>
       </div>
@@ -2368,6 +2488,8 @@ async function downloadTemplate(){
     ["Start date","Yes","yyyy-mm-dd, e.g. 2026-08-01"],
     ["End date","Yes","yyyy-mm-dd, must not be before the start date"],
     ["Status update","No","Not started, Ongoing, Achieved, On Hold. Blank means Not started"],
+    ["Priority","No","1 (highest), 2 or 3. Blank means none"],
+    ["Expected outcome","No","Any text \u2014 what good looks like when it's done"],
     ["Comment","No","Any text"],
     ["",""],
     ["70","Learning by Doing","Stretch work, ownership, real delivery"],
@@ -2382,7 +2504,7 @@ async function downloadTemplate(){
   }
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([IMPORT_COLS].concat(IMPORT_SAMPLE));
-  ws["!cols"] = [{wch:46},{wch:8},{wch:14},{wch:14},{wch:16},{wch:38}];
+  ws["!cols"] = [{wch:46},{wch:8},{wch:14},{wch:14},{wch:16},{wch:9},{wch:42},{wch:38}];
   XLSX.utils.book_append_sheet(wb, ws, "Actions");
   const wn = XLSX.utils.aoa_to_sheet(notes);
   wn["!cols"] = [{wch:18},{wch:10},{wch:64}];
@@ -2455,6 +2577,8 @@ async function validateImport(inp){
       const end   = cellDate(row[ix("End date")]);
       let   upd   = String(row[ix("Status update")]||"").trim();
       const note  = String(row[ix("Comment")]||"").trim();
+      const pri   = String(row[ix("Priority")]||"").trim().replace(/[^0-9]/g,"");
+      const outc  = String(row[ix("Expected outcome")]||"").trim();
 
       if(!title)                    errs.push(`Row ${ln}: Action title is empty.`);
       if(!["70","20","10"].includes(band)) errs.push(`Row ${ln}: Band is "${row[ix("Band")]}" — must be 70, 20 or 10.`);
@@ -2468,7 +2592,10 @@ async function validateImport(inp){
         if(!m) errs.push(`Row ${ln}: Status update "${upd}" isn't one of ${IMP_STATUS.join(", ")}.`);
         else upd = m;
       }
-      rows.push({title, band, start, end, update:upd, comment:note});
+      if(pri && !["1","2","3"].includes(pri))
+        errs.push(`Row ${ln}: Priority "${row[ix("Priority")]}" \u2014 must be 1, 2, 3 or blank.`);
+      rows.push({title, band, start, end, update:upd, comment:note,
+                 priority:pri, outcome:outc});
     }
 
     if(!rows.length && !errs.length){
@@ -2505,6 +2632,7 @@ function commitImport(){
     const a = { id:newActionId(), title:r.title, band:r.band,
                 timeline:{start:r.start, end:r.end},
                 status:"Approved", update:r.update, comment:r.comment,
+                priority:r.priority||"", outcome:r.outcome||"", origin:"General",
                 _visMentee:"TRUE", _visLead:"TRUE",
                 _createdBy:CURRENT_EMP||ACTOR, _createdOn:today() };
     lp.actions.push(a);
@@ -2907,11 +3035,30 @@ function setTargetStatus(eid, tid, value){
    "okr:<eid>:<n>" for the OKR itself. Same string goes in the Comments sheet's
    ActionID, so a thread is whatever shares an anchor - no name matching. */
 function threadFor(anchor){ return (DB.hipotThreads||{})[anchor] || []; }
+/* Development actions get the same thread as HiPot targets - one comment field
+   only ever held the latest note, and the exchange around an action is the
+   useful part. Anchored on the action id. */
+function laThreadBtn(eid, a){
+  const n = threadFor(a.id).length;
+  return `<button class="cbtn${n?" has":""}"
+      onclick="openOkrComments('${eid}','${a.id}','${String(a.title).replace(/'/g,"\\'").replace(/"/g,"&quot;")}')"
+      title="${n?n+" comment"+(n===1?"":"s"):"Add a comment"}" aria-label="Comments">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      ${n?`<b>${n}</b>`:""}</button>`;
+}
+
+/* A thread is a conversation, so both sides can post: the person it's about,
+   whoever mentors them, and HR. Deliberately not tied to edit rights - you can
+   be unable to change an action and still have something to say about it. */
 function canComment(eid){
-  if(!isEditable("hipot.targets")) return false;
   if(IS_ADMIN) return true;
-  if(ACTOR === eid && ACTOR === CURRENT_EMP) return true;
-  return ROLE === "mentor" || (typeof _mentorReturn !== "undefined" && !!_mentorReturn);
+  const me = (typeof CURRENT_EMP !== "undefined" && CURRENT_EMP) || ACTOR;
+  if(me === eid) return true;                       // it's about them
+  const lp = DB.learningPlans[eid];
+  if(lp && lp.mentor === me) return true;           // they mentor them
+  const paired = (DB.pairings||[]).some(p=>p.mentee===eid && p.mentor===me && p.status==="Active");
+  return paired || ROLE === "mentor" || (typeof _mentorReturn !== "undefined" && !!_mentorReturn);
 }
 /* Comments live in a popup off the OKR header rather than stacked under every
    card - on a plan with five OKRs the inline threads pushed the initiatives,
@@ -3207,7 +3354,7 @@ function submitUpdate(tid){
   t._lastComment=cm;
   const pair=DB.pairings.find(p=>p.mentee===t.emp&&p.mentor===t.approver);
   if(pair){(DB.interactions[pair.id]=DB.interactions[pair.id]||[]).push({d:new Date().toISOString().slice(0,10),by:t.emp,tt:"Progress submitted",tx:`${t.title} → ${t.progress}%. ${cm||"(no comment)"}`});}
-  closeModal();render();buildNav();toast("Submitted for review");
+  closeModal();buildNav();afterLaSave();toast("Submitted for review");
 }
 function reviewAction(tid,approve){
   if(approvalsPaused()){toast("Approvals are paused by HR");return;}
@@ -3216,7 +3363,7 @@ function reviewAction(tid,approve){
   t.status=approve?"Approved":"Returned";
   const pair=DB.pairings.find(p=>p.mentee===t.emp&&p.mentor===t.approver);
   if(pair){(DB.interactions[pair.id]=DB.interactions[pair.id]||[]).push({d:new Date().toISOString().slice(0,10),by:ACTOR,tt:approve?"Approved":"Returned with comments",tx:`${t.title}. ${cm||""}`});}
-  closeModal();render();buildNav();toast(approve?"Approved — record locked":"Returned to mentee");
+  closeModal();buildNav();afterLaSave();toast(approve?"Approved — record locked":"Returned to mentee");
 }
 function openReview(tid){
   const t=DB.targets.find(x=>x.id===tid);
@@ -3268,11 +3415,14 @@ function laBandChanged(band){
 function laForm(id, preset){
   if(!preset || !preset._origin) _pendingOrigin = (preset && preset._origin) || (id ? null : "General");
   else _pendingOrigin = preset._origin;
+  if(!preset || !preset.evpKind){ if(!id){ _pendingKind = null; _pendingPillar = null; } }
   const lp=DB.learningPlans[ACTOR];
   const a = id ? lp.actions.find(x=>x.id===id)
                : Object.assign({id:"",title:"",band:"70",timeline:{start:"",end:""},
                                 status:"Approved",update:"",comment:"",priority:"",outcome:""}, preset||{});
-  const opts=Object.entries(BANDS).map(([k,b])=>`<option value="${k}" ${a.band===k?"selected":""}>${b.label}</option>`).join("");
+  const isFix = (a.evpKind === "fix") || (a.band === "na");
+  const opts=Object.entries(BANDS).filter(([k])=>k!=="na")
+    .map(([k,b])=>`<option value="${k}" ${a.band===k?"selected":""}>${b.label}</option>`).join("");
   const STATUS_OPTS=["Not started","Ongoing","Achieved","On Hold"];
   const stOpts=`<option value="" ${!a.update?"selected":""} disabled>Select status…</option>`+
     STATUS_OPTS.map(o=>`<option ${a.update===o?"selected":""}>${o}</option>`).join("");
@@ -3283,26 +3433,32 @@ function laForm(id, preset){
       : "All fields are required. Timeline &amp; band changes route to your mentor."}</div>
     <label>Action <span class="req">*</span></label>
     <input type="text" id="laTitle" value="${(a.title||"").replace(/"/g,'&quot;')}" placeholder="e.g. Take ownership of 2 client accounts">
-    <label>70:20:10 band <span class="req">*</span></label>
-    <select id="laBand" onchange="laBandChanged(this.value)" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">${opts}</select>
-    <div id="laBandDesc" class="note" style="margin-top:8px;font-size:12px">${BANDS[a.band].desc}</div>
+    ${isFix?"":`<label>70:20:10 band <span class="req">*</span></label>`}
+    ${isFix
+      ? `<input type="hidden" id="laBand" value="na">
+         <div class="note" style="margin-top:2px;font-size:12px">
+           <b>70:20:10 band — not applicable.</b> This is an action item to resolve something,
+           not a development goal, so it sits outside the model.</div>`
+      : `<select id="laBand" onchange="laBandChanged(this.value)" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">${opts}</select>
+         <div id="laBandDesc" class="note" style="margin-top:8px;font-size:12px">${(BANDS[a.band]||{}).desc||""}</div>`}
     <div style="display:flex;gap:12px">
-      <div style="flex:1"><label>Start date <span class="req">*</span></label><input type="date" id="laStart" value="${a.timeline.start||""}"></div>
-      <div style="flex:1"><label>End date <span class="req">*</span></label><input type="date" id="laEnd" value="${a.timeline.end||""}"></div>
+      <div style="flex:1"><label>Start date ${isFix?'<span style="color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span>':'<span class="req">*</span>'}</label><input type="date" id="laStart" value="${a.timeline.start||""}"></div>
+      <div style="flex:1"><label>${isFix?"Target date":"End date"} ${isFix?'<span style="color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span>':'<span class="req">*</span>'}</label><input type="date" id="laEnd" value="${a.timeline.end||""}"></div>
     </div>
     <label>Status <span class="req">*</span></label>
     <select id="laStatus" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">${stOpts}</select>
-    <label>Priority <span style="color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
-    <select id="laPriority" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">
+    ${isFix?"":`<label>Priority <span style="color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>`}
+    ${isFix ? `<input type="hidden" id="laPriority" value="">` : `<select id="laPriority" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">
       <option value="" ${!a.priority?"selected":""}>None</option>
       <option value="1" ${a.priority==="1"?"selected":""}>P1 \u2014 Highest</option>
       <option value="2" ${a.priority==="2"?"selected":""}>P2</option>
       <option value="3" ${a.priority==="3"?"selected":""}>P3 \u2014 Lowest</option>
-    </select>
+    </select>`}
     <label>Expected outcome <span style="color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
     <textarea id="laOutcome" rows="2" placeholder="What good looks like when this action is done...">${(a.outcome||"").replace(/</g,"&lt;")}</textarea>
-    <label>Comment <span style="color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0">(optional — logged, no approval needed)</span></label>
-    <textarea id="laComment" rows="2" placeholder="Any note or context on this action...">${(a.comment||"").replace(/</g,"&lt;")}</textarea>
+    <input type="hidden" id="laComment" value="${(a.comment||"").replace(/"/g,"&quot;")}">
+    ${id?`<div class="note" style="margin-top:12px">Notes and discussion live on the
+      <b>comment thread</b> — use the speech-bubble button on this action in the plan.</div>`:""}
     <div class="lberr" id="laErr"></div>
     <div class="foot">
       <button class="btn" onclick="closeModal()">Cancel</button>
@@ -3310,6 +3466,15 @@ function laForm(id, preset){
     </div>`;
   openModal();
 }
+/* Where to land after saving. Raised from an EVP check-in means going back to
+   that check-in, not to the plan the action happens to live on. */
+function afterLaSave(){
+  const back = _evpReturnTo;
+  _evpReturnTo = null;
+  if(back && typeof openEvpPage === "function"){ ACTOR = back; openEvpPage(); return; }
+  render();
+}
+
 function saveLA(id){
   const lp=DB.learningPlans[ACTOR];
   const title=document.getElementById("laTitle").value.trim();
@@ -3324,8 +3489,9 @@ function saveLA(id){
   const missing=[];
   if(!title) missing.push("Action");
   if(!band) missing.push("70:20:10 band");
-  if(!start) missing.push("Start date");
-  if(!end) missing.push("End date");
+  const isFixSave = (band === "na");
+  if(!isFixSave && !start) missing.push("Start date");
+  if(!isFixSave && !end) missing.push("End date");
   if(!statusUpd) missing.push("Status");
   if(start&&end&&end<start) missing.push("End date must be after start date");
   if(missing.length){
@@ -3352,29 +3518,29 @@ function saveLA(id){
       if(approvalsPaused() && !editorIsMentor){
         // approvals frozen: keep prior status, don't route to Pending
         laLog(ACTOR, ACTOR, "edited", id, `Updated action while approvals paused; not routed. band ${band}; ${start||"?"}→${end||"?"}`);
-        closeModal();render();buildNav();
+        closeModal();buildNav();afterLaSave();
         toast("Saved — approvals are paused, so this wasn't sent for review");
         return;
       }
       a.status = "Approved";   // direct change, no review step
       laLog(ACTOR, ACTOR, "edited", id, `Updated action; band ${band}; ${start||"?"}→${end||"?"}`);
     }
-    closeModal();render();buildNav();
+    closeModal();buildNav();afterLaSave();
     toast(changed ? "Saved" : ((statusChanged||commentChanged||priorityChanged||outcomeChanged)?"Saved & logged":"No changes"));
   }else{
     if(approvalsPaused() && !editorIsMentor){
-      lp.actions.push({id:"LA-"+(lp.actions.length+1+Math.floor(Math.random()*90)),title,band,timeline:{start,end},update:statusUpd,comment,priority,outcome,status:"Draft",origin:_pendingOrigin||"General"});
+      lp.actions.push({id:"LA-"+(lp.actions.length+1+Math.floor(Math.random()*90)),title,band,timeline:{start,end},update:statusUpd,comment,priority,outcome,status:"Draft",origin:_pendingOrigin||"General",pillar:_pendingPillar||""});
       laLog(ACTOR, ACTOR, "created", lp.actions[lp.actions.length-1].id, `Added action while approvals paused; kept as draft`);
-      closeModal();render();buildNav();
+      closeModal();buildNav();afterLaSave();
       toast("Saved as draft — approvals are paused");
       return;
     }
     const newId="LA-"+(lp.actions.length+1+Math.floor(Math.random()*90));
-    lp.actions.push({id:newId,title,band,timeline:{start,end},update:statusUpd,comment,priority,outcome,status:"Approved",origin:_pendingOrigin||"General"});
+    lp.actions.push({id:newId,title,band,timeline:{start,end},update:statusUpd,comment,priority,outcome,status:"Approved",origin:_pendingOrigin||"General",pillar:_pendingPillar||""});
     laLog(ACTOR, ACTOR, "created", newId, `Added action; band ${band}`);
     if(statusUpd) laLog(ACTOR, ACTOR, "status update", newId, `Status: "${statusUpd}"`);
     if(comment) laLog(ACTOR, ACTOR, "comment", newId, `Comment: "${comment}"`);
-    closeModal();render();buildNav();
+    closeModal();buildNav();afterLaSave();
     toast("Saved");
   }
 }
@@ -3383,7 +3549,7 @@ function approveLA(eid,id,ok){
   const lp=DB.learningPlans[eid];const a=lp.actions.find(x=>x.id===id);
   a.status=ok?"Approved":"Draft";
   laLog(eid, ACTOR, ok?"approved":"returned", id, ok?"Approved":"Returned for revision");
-  closeModal();render();buildNav();toast(ok?"Action approved":"Returned to mentee");
+  closeModal();buildNav();afterLaSave();toast(ok?"Action approved":"Returned to mentee");
 }
 function showLog(){
   const lp=DB.learningPlans[ACTOR];
@@ -3505,13 +3671,20 @@ function vMentees(){
   const rows=uniq.map(eid=>{
     const cp=curPath(eid);
     const readSel=cp?`<select onchange="mentorSetReadiness('${eid}',this.value)" style="font-family:inherit;font-size:12.5px;padding:5px 8px;border:1px solid var(--line2);border-radius:7px">${rdOpts(cp.readiness)}</select>`:'<span style="color:var(--t3)">—</span>';
-    return `<tr>
-      <td><div class="who"><span class="av">${initials(nm(eid))}</span><div><div style="font-weight:500">${nm(eid)}</div><div style="font-size:11.5px;color:var(--t3)">${E(eid).fn}</div></div></div></td>
+    const isHip = !!(E(eid).hipot || hipotPlanFor(eid));
+    return `<tr class="${isHip?"hiprow":""}">
+      <td><div class="who"><span class="av ${isHip?"avhip":""}">${initials(nm(eid))}</span><div>
+        <div style="font-weight:500;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${nm(eid)}
+          ${isHip?`<span class="hipbadge" title="On the FY27 high-potential cohort">HI-POT</span>`:""}</div>
+        <div style="font-size:11.5px;color:var(--t3)">${E(eid).fn}</div></div></div></td>
       <td style="font-size:13px">${E(eid).desig}</td>
       <td style="font-size:13px">${cp?cp.next:'<span style="color:var(--t3)">—</span>'}</td>
-      <td style="text-align:right"><button class="btn sm pri" onclick="openMenteeLearning('${eid}')"><span class="ti ti-edit" style="font-size:13px"></span>Development plan</button></td></tr>`;
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn sm" onclick="openMenteeEvp('${eid}')"><span class="ti ti-clipboard-text" style="font-size:13px"></span>EVP check-in</button>
+        <button class="btn sm pri" onclick="openMenteeLearning('${eid}')"><span class="ti ti-edit" style="font-size:13px"></span>Development plan</button>
+      </td></tr>`;
   }).join("");
-  return `<div class="card"><h2>My mentees</h2><p class="hint">One plan per person \u2014 career milestone, HiPot targets and development actions are all on it. Changes are logged and visible to the mentee.</p>
+  return `<div class="card"><h2>My mentees</h2>
     <table class="tbl"><thead><tr><th>Mentee</th><th>Current role</th><th>Next milestone</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 /* mentor edits mentee readiness inline -> reflected to mentee + logged */
@@ -4782,8 +4955,7 @@ function f360Body(eid){
     </tr>`).join("")}</tbody></table>`;
 
   return `${hero}
-    ${stickyActionBar(eid, "the 360 feedback report", "360 feedback report")}
-
+    
     <div class="card"><h2>Greatest strengths</h2>
       <p class="hint">Top strengths based on cumulative ratings.</p>
       ${strengths.length?attrTableSimple(strengths,false):'<div class="note">Not enough data.</div>'}
@@ -4923,17 +5095,6 @@ function sectionActionBtn(eid, section, src){
    individual sections, so by the time you've read to the bottom there's nothing
    to press. This bar sticks to the top of the report and raises an action for
    the report as a whole. */
-function stickyActionBar(eid, src, label){
-  if(!canRaiseAction(eid)) return "";
-  const safe = String(label).replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;");
-  return `<div class="stickybar">
-    <div class="sbtxt">Anything here worth acting on?
-      <span>Raise it into ${escH(nm(eid))}'s development plan.</span></div>
-    <button class="btn sm pri nowrap" onclick="raiseAction('${eid}','${safe}','${src}')">
-      <span class="ti ti-plus" style="font-size:13px"></span>Add development action</button>
-  </div>`;
-}
-
 function actionBtn(eid, label, src){
   if(!canRaiseAction(eid)) return "";
   const fp = String(label).toLowerCase().replace(/[^a-z0-9]+/g," ").trim().slice(0,90);
@@ -5114,8 +5275,7 @@ function vAiSummary(){
      key development opportunities -> hidden strengths & blind spots ->
      top 3 development priorities -> development plan. */
   return `${hero}
-    ${stickyActionBar(eid, "the AI 360 summary", "AI 360 summary")}
-
+    
     <div class="card"><h2>Executive summary</h2>
       <p class="ailead">${escH(a.exec)}</p></div>
 
@@ -5595,8 +5755,27 @@ function signOut(){
    ========================================================================== */
 const FLOW_URL = "https://defaultb9d69197ce1f49079545b307af2335.e9.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/23/workflows/9f111d096b67499199d839ab5c6d7afa/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=WnkLtJAaJG8DqY8ZtRARdlZx4vcghAIfsVAMWGWNLnE";   // <-- paste the HTTP POST URL of your one flow
 
+/* Optional read-only snapshot. If set, READs fetch this file directly instead
+   of going through Power Automate - one HTTP GET rather than eleven queued
+   Excel calls, so it returns in a few hundred milliseconds instead of ~13s.
+   Writes still go through FLOW_URL, so edits are live either way; the snapshot
+   just has to be refreshed by a scheduled flow.
+   Leave blank to keep using the flow for reads.
+   NOTE: this file contains the whole employee directory. It must sit somewhere
+   that requires a login - a SharePoint library or private blob, never a public
+   GitHub Pages URL. */
+const SNAPSHOT_URL = "";
+
 const SYNC_ON   = () => !!FLOW_URL;
 const truthy    = v => String(v).trim().toUpperCase() === "TRUE";
+/* Visibility flags: blank means visible. A missing or empty cell used to hide
+   the row, so anything written before the column existed - or by a flow that
+   doesn't map it - vanished from the portal while sitting plainly in Excel.
+   Only an explicit FALSE/NO/0 hides something. */
+const visible = v => {
+  const t = String(v == null ? "" : v).trim().toUpperCase();
+  return !(t === "FALSE" || t === "NO" || t === "N" || t === "0");
+};
 let   LAST_SYNC = null;
 let   SYNC_STATE = "off";   // off | loading | live | error
 
@@ -5646,7 +5825,9 @@ function showSyncLog(){
     ? `<div class="note" style="margin-bottom:12px"><b>Last READ took ${
         LAST_READ_MS==null?"\u2014":(LAST_READ_MS/1000).toFixed(1)+" seconds"} and returned:</b> ${
         Object.keys(READ_COUNTS).map(k=>`${k} <b>${READ_COUNTS[k]}</b>`).join(" \u00b7 ")
-      }<div style="margin-top:7px;color:var(--t2)">A table showing 0 is empty in the workbook \u2014 that page will look blank, and that's the workbook, not the sync.</div></div>`
+      }${COMMENT_COUNT?`<div style="margin-top:7px;color:var(--t2)">Comments: ${COMMENT_COUNT.rows} rows read,
+        ${COMMENT_COUNT.threaded} attached to ${COMMENT_COUNT.threads} threads.
+        ${COMMENT_COUNT.rows && !COMMENT_COUNT.threaded ? "<b>None matched an action or target \u2014 check the ActionID column.</b>" : ""}</div>`:""}<div style="margin-top:7px;color:var(--t2)">A table showing 0 is empty in the workbook \u2014 that page will look blank, and that's the workbook, not the sync.</div></div>`
     : '<div class="note" style="margin-bottom:12px">No READ has completed yet.</div>';
   document.getElementById("modalBody").innerHTML = `
     <h3>Excel sync log</h3>
@@ -5728,7 +5909,7 @@ function writeStoredSnapshot(payload){
 
 /* Row counts from the last READ, so "nothing on this page" can be told apart
    from "the sync failed". Surfaced on the pill and in the sync log. */
-let READ_COUNTS = null, LAST_READ_MS = null;
+let READ_COUNTS = null, LAST_READ_MS = null, COMMENT_COUNT = null;
 
 async function loadFromExcel(manual){
   if(!SYNC_ON()){ SYNC_STATE="off"; syncPill(); return; }
@@ -5779,7 +5960,18 @@ async function loadFromExcel(manual){
       : "Syncing with Excel\u2026 " + secs + "s");
   }, 1000);
   try{
-    const d = await callFlow({ table:"READ" });
+    let d = null;
+    if(SNAPSHOT_URL){
+      /* cache-bust so a refreshed export is picked up straight away */
+      try{
+        const res = await fetch(SNAPSHOT_URL + (SNAPSHOT_URL.indexOf("?")<0?"?":"&") + "t=" + Date.now(),
+                                { credentials:"include", cache:"no-store" });
+        if(res.ok) d = await res.json();
+        else console.warn("[sync] snapshot HTTP " + res.status + " - falling back to the flow");
+      }catch(e){ console.warn("[sync] snapshot unreachable - falling back to the flow", e); }
+    }
+    /* no snapshot configured, or it failed - the flow is still the source */
+    if(!d) d = await callFlow({ table:"READ" });
     LAST_READ_MS = Date.now() - _t0;
     clearInterval(window._syncTick);
     _READ_CACHE = d; _READ_AT = Date.now();
@@ -5793,7 +5985,8 @@ async function loadFromExcel(manual){
     ["employees","pairings","career","actions","comments","targets",
      "certifications","permissions","config","evpCycles","evpResponses"]
       .forEach(k => READ_COUNTS[k] = Array.isArray(d[k]) ? d[k].length : 0);
-    SYNC_LOG.push({ t:new Date().toTimeString().slice(0,8), table:"READ", ok:true,
+    SYNC_LOG.push({ t:new Date().toTimeString().slice(0,8),
+      table:(SNAPSHOT_URL?"READ (snapshot)":"READ (flow)"), ok:true,
       key:(LAST_READ_MS/1000).toFixed(1)+"s \u00b7 "+Object.keys(READ_COUNTS).map(k=>k+" "+READ_COUNTS[k]).join(", ") });
     if(SYNC_LOG.length > 100) SYNC_LOG.shift();
 
@@ -5879,16 +6072,16 @@ function applyReadPayload(d){
     });
     (d.actions||[]).filter(a=>a.ActionID).forEach(a=>{
       const lp = DB.learningPlans[a.EmployeeID]; if(!lp) return;
-      if(!truthy(a.VisibleToMentee) && !IS_ADMIN && ROLE==="employee") return;   // row-level visibility
+      if(!visible(a.VisibleToMentee) && !IS_ADMIN && ROLE==="employee") return;   // row-level visibility
       const o = {
         id:a.ActionID, title:a.ActionTitle, band:String(a.Band),
         timeline:{start:a.StartDate||"", end:a.EndDate||""},
         status:a.ApprovalStatus||"Approved", update:normLAStatus(a.StatusUpdate||""),
         comment:a.LatestComment||"",
         priority:a.Priority?String(a.Priority).replace(/^P/i,""):"", outcome:a.ExpectedOutcome||"",
-        origin:a.Origin||"General",
-        _visMentee: truthy(a.VisibleToMentee) ? "TRUE" : "FALSE",
-        _visLead:   truthy(a.VisibleToLeadership) ? "TRUE" : "FALSE",
+        origin:a.Origin||"General", pillar:a.Pillar||"",
+        _visMentee: visible(a.VisibleToMentee) ? "TRUE" : "FALSE",
+        _visLead:   visible(a.VisibleToLeadership) ? "TRUE" : "FALSE",
         _createdBy: a.CreatedBy||"", _createdOn: a.CreatedOn||""
       };
       /* rows whose status was set to "Archived" stay in the archive across
@@ -5902,9 +6095,13 @@ function applyReadPayload(d){
       }
       if(a.MentorID && !lp.mentor) lp.mentor = a.MentorID;
     });
-    (d.comments||[]).filter(c=>c.CommentID).forEach(c=>{
+    if(typeof d.comments === "string"){
+      try{ d.comments = JSON.parse(d.comments); }catch(e){ d.comments = []; }
+    }
+    if(!Array.isArray(d.comments)) d.comments = [];
+    d.comments.filter(c=>c.CommentID).forEach(c=>{
       const lp = DB.learningPlans[c.EmployeeID]; if(!lp) return;
-      if(!truthy(c.VisibleToMentee) && !IS_ADMIN && ROLE==="employee") return;
+      if(!visible(c.VisibleToMentee) && !IS_ADMIN && ROLE==="employee") return;
       const role = String(c.AuthorRole||"");
       if(role.slice(0,4).toLowerCase()==="log:"){
         /* a persisted change-log entry — restore it with its original act */
@@ -5926,15 +6123,38 @@ function applyReadPayload(d){
     }
     /* OKR comment threads ride the Comments sheet, keyed by the HP- initiative
        id they were filed against. Rebuilt on every read so they survive a refresh. */
-    if(Array.isArray(d.comments)){
+    /* Excel column names come back with whatever casing and spacing the sheet
+       uses, and a table can arrive as a JSON string rather than an array, so
+       read the fields defensively - a thread that silently fails to rebuild
+       looks exactly like a comment that never saved. */
+    let cmts = d.comments;
+    if(typeof cmts === "string"){ try{ cmts = JSON.parse(cmts); }catch(e){ cmts = []; } }
+    if(Array.isArray(cmts)){
+      const pick = (o, names) => {
+        for(const n of names){
+          for(const k in o){
+            if(k.replace(/[^a-z0-9]/gi,"").toLowerCase() === n) return o[k];
+          }
+        }
+        return "";
+      };
       DB.hipotThreads = {};
-      d.comments.filter(c=>{ const a=String(c.ActionID||""); return a.indexOf("HP-")===0 || a.indexOf("okr:")===0; })
-        .sort((a,b)=>String(a.CreatedOn||"").localeCompare(String(b.CreatedOn||"")))
+      let kept = 0;
+      cmts.map(c=>({
+          anchor: String(pick(c,["actionid","targetid","id"])||"").trim(),
+          by:     String(pick(c,["authorid","author","createdby"])||""),
+          at:     String(cellDate(pick(c,["createdon","created","date"]))||"").slice(0,16),
+          text:   String(pick(c,["commenttext","comment","text"])||"")
+        }))
+        .filter(c=>c.anchor && c.text)
+        .sort((a,b)=>a.at.localeCompare(b.at))
         .forEach(c=>{
-          const a = c.ActionID;
-          (DB.hipotThreads[a] = DB.hipotThreads[a] || [])
-            .push({ by:c.AuthorID||"", at:String(c.CreatedOn||"").slice(0,16), text:c.CommentText||"" });
+          kept++;
+          (DB.hipotThreads[c.anchor] = DB.hipotThreads[c.anchor] || [])
+            .push({ by:c.by, at:c.at, text:c.text });
         });
+      COMMENT_COUNT = { rows: cmts.length, threaded: kept,
+                        threads: Object.keys(DB.hipotThreads).length };
     }
 
     /* top the table up from the hardcoded plans for anything Excel doesn't
@@ -6121,7 +6341,7 @@ function actionRow(a, eid, mentorId){
     ApprovalStatus:a.status||"Approved", StatusUpdate:a.update||"", LatestComment:a.comment||"",
     Priority:a.priority||"", ExpectedOutcome:a.outcome||"",
     VisibleToMentee:a._visMentee||"TRUE", VisibleToLeadership:a._visLead||"TRUE",
-    MentorID:mentorId||"", Origin:a.origin||"General",
+    MentorID:mentorId||"", Origin:a.origin||"General", Pillar:a.pillar||"",
     CreatedBy:a._createdBy||(CURRENT_EMP||ACTOR), CreatedOn:a._createdOn||today(),
     LastUpdatedBy:CURRENT_EMP||ACTOR, LastUpdatedOn:today()
   };
@@ -6164,13 +6384,13 @@ saveLA = function(id){
     }
   });
 
-  /* raised from a finding -> show them the plan it landed in */
+  /* Raised from a finding. This used to jump to the learning plan, which meant
+     losing your place halfway down a check-in you were still working through -
+     afterLaSave already returns you to the page you came from, so just say
+     where it went. */
   if(fromEvp){
     _evpActionFrom = null;
-    const eid = ACTOR;
-    if(typeof _mentorReturn !== "undefined" && _mentorReturn) openMenteeLearning(eid);
-    else { if(typeof _subPage !== "undefined") _subPage = null; go("learning"); }
-    toast("Action added to the learning plan");
+    toast("Added to the development plan");
   }
 };
 
