@@ -1830,6 +1830,33 @@ function pickCertFile(inp){
   CERT_FILE = f;
   note.innerHTML = "Ready to upload: <b>"+f.name+"</b> ("+Math.round(f.size/1024)+" KB)";
 }
+/* Flows return the link in whatever shape the last action produced - a bare
+   string, {url}, the Create-file body with webUrl, or the share-link object.
+   Rather than demand one exact shape, take the first http link we can find. */
+function pickUrl(r){
+  if(!r) return "";
+  if(typeof r === "string"){
+    const t = r.trim();
+    if(/^https?:\/\//i.test(t)) return t;
+    try{ return pickUrl(JSON.parse(t)); }catch(e){ return ""; }
+  }
+  const direct = r.url || r.webUrl || r.WebUrl || r.link || r.Link;
+  if(typeof direct === "string" && /^https?:\/\//i.test(direct)) return direct;
+  if(direct && typeof direct === "object"){
+    const w = direct.webUrl || direct.WebUrl || direct.url;
+    if(typeof w === "string" && /^https?:\/\//i.test(w)) return w;
+  }
+  /* last resort: any http string anywhere in the reply */
+  let found = "";
+  const walk = o => {
+    if(found || !o) return;
+    if(typeof o === "string"){ if(/^https?:\/\//i.test(o.trim())) found = o.trim(); return; }
+    if(typeof o === "object") Object.keys(o).forEach(k=>walk(o[k]));
+  };
+  walk(r);
+  return found;
+}
+
 function fileToBase64(f){
   return new Promise((res,rej)=>{
     const r = new FileReader();
@@ -1860,9 +1887,9 @@ async function saveCert(id){
            genuine upload failure. */
         CERT_LAST_REPLY = r;
         if(!r) throw new Error("The flow returned nothing. Check the CERT_FILE case exists in the Switch.");
-        if(!r.url) throw new Error("The flow replied, but without a url. It sent: " +
-          JSON.stringify(r).slice(0,160));
-        fileUrl = r.url;
+        fileUrl = pickUrl(r);
+        if(!fileUrl) throw new Error("The flow replied without a link. It sent: " +
+          (typeof r === "string" ? r.slice(0,160) : JSON.stringify(r).slice(0,160)));
       }
     }
 
@@ -3518,6 +3545,16 @@ function closeModal(){
 }
 
 /* ============ LEARNING PLAN ACTIONS (70:20:10) ============ */
+/* Read a column whatever case or spacing the sheet uses. */
+function col(row, names){
+  for(const n of names){
+    for(const k in row){
+      if(k.replace(/[^a-z0-9]/gi,"").toLowerCase() === n) return row[k];
+    }
+  }
+  return "";
+}
+
 function laLog(eid,by,act,target,note){
   const lp=DB.learningPlans[eid];if(!lp)return;
   const ts=new Date().toISOString().slice(0,16).replace("T"," ");
@@ -6294,7 +6331,7 @@ function applyReadPayload(d){
         status:a.ApprovalStatus||"Approved", update:normLAStatus(a.StatusUpdate||""),
         comment:a.LatestComment||"",
         priority:a.Priority?String(a.Priority).replace(/^P/i,""):"", outcome:a.ExpectedOutcome||"",
-        origin:a.Origin||"General", pillar:a.Pillar||"",
+        origin:col(a,["origin"])||"General", pillar:col(a,["pillar","evppillar"])||"",
         _visMentee: visible(a.VisibleToMentee) ? "TRUE" : "FALSE",
         _visLead:   visible(a.VisibleToLeadership) ? "TRUE" : "FALSE",
         _createdBy: a.CreatedBy||"", _createdOn: a.CreatedOn||""
