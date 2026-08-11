@@ -311,6 +311,16 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
 /* HiPot mentees need to be findable at a glance in a long list, so the whole
    row is tinted and the left edge marked - a small icon alone gets lost. */
 /* EVP pillar cards */
+.latbl td{vertical-align:top;padding-top:13px}
+.lacell{min-width:0}
+.lameta{white-space:normal}
+.lameta .pill{display:inline-block;margin-bottom:7px}
+.tluntil{color:var(--t3)}
+.lawhen{font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:7px}
+.lawhen .tlrange{white-space:normal}
+.lacts{display:flex;flex-direction:column;align-items:stretch;gap:6px}
+.lacts .btn{justify-content:center;width:100%}
+.lacts .cbtn{justify-content:center;width:100%}
 .evptag{font-size:10.5px;font-weight:600;letter-spacing:.04em;color:var(--violet);margin-top:5px;line-height:1.35}
 .choosewrap{display:flex;flex-direction:column;gap:10px;margin:14px 0 4px}
 .choose{text-align:left;font:inherit;cursor:pointer;background:var(--card);
@@ -373,12 +383,13 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
 .qf+.qf{border-left:1px solid var(--line2)}
 .qf:hover{color:var(--violet)}
 .qf.on{background:var(--violet);color:#fff}
-.cbtn{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;background:none;cursor:pointer;
-  border:1px solid var(--line2);border-radius:50px;padding:6px 9px;color:var(--t3);font:inherit;
-  transition:color .12s,border-color .12s}
-.cbtn:hover{color:var(--violet);border-color:var(--violet)}
+.cbtn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:none;cursor:pointer;border:1px solid var(--line2);border-radius:8px;
+  padding:6px 11px;color:var(--t1);font:inherit;font-size:12.5px;
+  transition:color .12s,border-color .12s,background .12s}
+.cbtn:hover{background:var(--bg2);border-color:var(--line2)}
 .cbtn.has{color:var(--violet);border-color:var(--violet)}
-.cbtn b{font-size:11px;font-weight:700}
+.cbtn b{font-size:11.5px;font-weight:600}
 
 .cmtscroll{max-height:46vh;overflow-y:auto;margin:4px 0 0;padding-right:4px}
 .msg{padding:9px 0;border-bottom:1px solid var(--line)}
@@ -1387,7 +1398,7 @@ const NAVS={
   ],
   mentor:[
     ["mentees","My mentees","ti-users"],
-    ["hipotmentees","HiPot mentees","ti-rocket"],
+    ["hipotmentees","My HiPot mentees","ti-rocket"],
     ["interactions","Interactions","ti-messages"]
   ],
   leader:[
@@ -1417,7 +1428,7 @@ const TITLES={
   succ:["Succession Planning","Who succeeds your role — and whose successor you are."],
   queue:["Review queue","Progress updates from your mentees awaiting your approval."],
   mentees:["My mentees","The people you mentor on their career path."],
-  hipotmentees:["HiPot mentees","The people you mentor on the FY27 high-potential cohort."],
+  hipotmentees:["My HiPot mentees","The people you mentor on the FY27 high-potential cohort."],
   interactions:["Interactions","Session notes and the logged history per mentee."],
   overview:["Org overview","Top-down health of the talent you can see."],
   hipots:["HiPots","Every high-potential in scope and their live targets."],
@@ -1719,38 +1730,53 @@ function openCertFile(id){
 }
 
 let CERT_FILE = null;   // File chosen in the modal, uploaded on save
+let CERT_LAST_REPLY = null;   // whatever the flow last sent back, for diagnosis
 function certForm(id){
   CERT_FILE = null;
+  setModalWide(true);
   const c = id ? certList(ACTOR).find(x=>x.id===id) : null;
   const cur = c ? c.type : "Certification";
   document.getElementById("modalBody").innerHTML = `
     <h3>${tid_label(c)}</h3>
     <div class="sub">${nm(ACTOR)}</div>
-    <label>Type</label>
-    <select id="ctType" onchange="certTypeChanged()">${CRED_TYPES.map(t=>`<option ${t===cur?"selected":""}>${t}</option>`).join("")}</select>
-    <label id="ctNameLab">Certification name</label>
-    <input id="ctName" type="text" placeholder="e.g. SHRM-CP" value="${c?c.name:""}">
-    <label id="ctIssuerLab">Issuing body</label>
-    <input id="ctIssuer" type="text" placeholder="e.g. SHRM" value="${c?c.issuer:""}">
-    <div class="mgrid">
-      <div><label>Duration (hours) <small style="font-weight:400;color:var(--t2)">(optional)</small></label>
-        <input id="ctHours" type="number" min="0" step="0.5" value="${c?c.hours:""}"></div>
-      <div><label>Mode</label>
-        <select id="ctMode">${["","In person","Virtual","Hybrid","Self-paced"].map(m=>`<option value="${m}" ${c&&c.mode===m?"selected":""}>${m||"\u2014 select \u2014"}</option>`).join("")}</select></div>
+    <div class="mrow">
+      <div>
+        <label>Type</label>
+        <select id="ctType" onchange="certTypeChanged()">${CRED_TYPES.map(t=>`<option ${t===cur?"selected":""}>${t}</option>`).join("")}</select>
+
+        <label id="ctNameLab">Certification name</label>
+        <input id="ctName" type="text" placeholder="e.g. SHRM-CP" value="${c?c.name:""}">
+
+        <label id="ctIssuerLab">Issuing body</label>
+        <input id="ctIssuer" type="text" placeholder="e.g. SHRM" value="${c?c.issuer:""}">
+
+        <div class="mgrid">
+          <div><label>Duration (hours) <small style="font-weight:400;color:var(--t2)">(optional)</small></label>
+            <input id="ctHours" type="number" min="0" step="0.5" value="${c?c.hours:""}"></div>
+          <div><label>Mode</label>
+            <select id="ctMode">${["","In person","Virtual","Hybrid","Self-paced"].map(m=>`<option value="${m}" ${c&&c.mode===m?"selected":""}>${m||"\u2014 select \u2014"}</option>`).join("")}</select></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="mgrid">
+          <div><label>Date of completion</label><input id="ctDate" type="date" value="${c?c.date:""}"></div>
+          <div id="ctExpWrap"><label>Valid until <small style="font-weight:400;color:var(--t2)">(optional)</small></label><input id="ctExp" type="date" value="${c?c.expires:""}"></div>
+        </div>
+
+        <div id="ctCredWrap"><label>Credential ID <small style="font-weight:400;color:var(--t2)">(optional)</small></label>
+          <input id="ctCred" type="text" placeholder="e.g. 1234-5678" value="${c?c.cred:""}"></div>
+
+        <label id="ctFileLab">Certificate file</label>
+        <input id="ctFile" type="file" accept=".pdf,.png,.jpg,.jpeg" onchange="pickCertFile(this)">
+        <div class="note" id="ctFileNote" style="margin-top:8px">${
+          c&&c.fileName ? "Currently attached: <b>"+c.fileName+"</b>. Choosing a new file replaces it."
+                        : "PDF or image, up to 4 MB."}</div>
+
+        <label>\u2026or paste a link instead</label>
+        <input id="ctUrl" type="text" placeholder="https://\u2026" value="${c?c.fileUrl:""}">
+      </div>
     </div>
-    <div class="mgrid">
-      <div><label>Date of completion</label><input id="ctDate" type="date" value="${c?c.date:""}"></div>
-      <div id="ctExpWrap"><label>Valid until <small style="font-weight:400;color:var(--t2)">(optional)</small></label><input id="ctExp" type="date" value="${c?c.expires:""}"></div>
-    </div>
-    <div id="ctCredWrap"><label>Credential ID <small style="font-weight:400;color:var(--t2)">(optional)</small></label>
-    <input id="ctCred" type="text" placeholder="e.g. 1234-5678" value="${c?c.cred:""}"></div>
-    <label id="ctFileLab">Certificate file</label>
-    <input id="ctFile" type="file" accept=".pdf,.png,.jpg,.jpeg" onchange="pickCertFile(this)">
-    <div class="note" id="ctFileNote" style="margin-top:8px">${
-      c&&c.fileName ? "Currently attached: <b>"+c.fileName+"</b>. Choosing a new file replaces it."
-                    : "PDF or image, up to 4 MB."}</div>
-    <label style="margin-top:12px">\u2026or paste a link instead</label>
-    <input id="ctUrl" type="text" placeholder="https://\u2026" value="${c?c.fileUrl:""}">
     <div class="foot">
       <button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn pri" id="ctSave" onclick="saveCert('${c?c.id:""}')">Save</button>
@@ -1810,7 +1836,13 @@ async function saveCert(id){
         btn.textContent = "Uploading\u2026";
         const r = await callFlow({ table:"CERT_FILE", key:ACTOR,
           fields:{ fileName:CERT_FILE.name, fileContent: await fileToBase64(CERT_FILE) } });
-        if(!r || !r.url) throw new Error("upload returned no url");
+        /* Keep what came back - "try again" tells nobody anything, and the
+           usual cause is the flow returning the wrong shape rather than a
+           genuine upload failure. */
+        CERT_LAST_REPLY = r;
+        if(!r) throw new Error("The flow returned nothing. Check the CERT_FILE case exists in the Switch.");
+        if(!r.url) throw new Error("The flow replied, but without a url. It sent: " +
+          JSON.stringify(r).slice(0,160));
         fileUrl = r.url;
       }
     }
@@ -1842,8 +1874,9 @@ async function saveCert(id){
 
     closeModal(); render(); toast("Saved");
   }catch(e){
-    console.error("[cert] save failed", e);
-    toast("Couldn't upload the file. Try again, or paste a link.");
+    console.error("[cert] save failed", e, "flow replied:", CERT_LAST_REPLY);
+    const why = (e && e.message) ? String(e.message) : "unknown error";
+    toast("Upload failed \u2014 " + why.slice(0, 150));
   }finally{
     btn.disabled = false; btn.textContent = "Save";
   }
@@ -2406,9 +2439,8 @@ function fmtRange(s,e){
   if(!s) return "\u2014";
   const ys=String(s).slice(0,4), ye=String(e||"").slice(0,4);
   const ms=fmtLAMonth(s), me=e?fmtLAMonth(e):"";
-  if(!e) return `${ms} ${ys.slice(2)}`;
-  return ys===ye ? `${ms} <span class="ar">\u2013</span> ${me} ${ye.slice(2)}`
-                 : `${ms} ${ys.slice(2)} <span class="ar">\u2013</span> ${me} ${ye.slice(2)}`;
+  if(!e) return `${ms} '${ys.slice(2)}`;
+  return `${ms} '${ys.slice(2)}<br><span class="tluntil">till ${me} '${ye.slice(2)}</span>`;
 }
 function fmtLAMonth(d){
   const p=String(d).split("-"); if(p.length!==3) return d;
@@ -2454,14 +2486,19 @@ function learningPlanTable(){
     const stColor = a.update==="Achieved"?"p-jade":a.update==="Ongoing"?"p-amber":a.update==="Not started"?"p-grey":a.update==="On Hold"?"p-rust":"p-grey";
     const statusTxt = a.update ? `<span class="pill ${stColor}">${a.update}</span>` : '<span style="color:var(--t3)">—</span>';
     return `<tr>
-      <td class="mono" style="width:40px;color:var(--t3);text-align:center;vertical-align:top;padding-top:13px">${i+1}</td>
-      <td style="min-width:170px"><div style="font-weight:500">${a.priority?`<span class="pill ${a.priority==="1"?"p-rust":a.priority==="2"?"p-amber":"p-grey"}" style="margin-right:6px">P${a.priority}</span>`:""}${a.title}</div>${a.outcome?`<div style="font-size:11.5px;color:var(--t3);margin-top:3px">${String(a.outcome).replace(/</g,"&lt;")}</div>`:""}</td>
-      <td><span class="pill ${b.cls||'p-grey'}">${b.short||a.band}</span>
-        ${a.origin==="EVP"?`<div class="evptag">EVP${a.pillar?` · ${escH(pillarName(a.pillar))}`:""}</div>`:""}</td>
-      <td class="tlcell">${tl}</td>
-      <td style="min-width:150px;font-size:12.5px;color:var(--t2)">${statusTxt}</td>
-      <td class="actcell" style="white-space:nowrap">${laThreadBtn(ACTOR, a)}${canEdit?` <button class="btn sm" onclick="editLA('${a.id}')">Edit</button> <button class="btn sm" onclick="deleteLA('${a.id}')" title="Delete \u2014 moves to the archive">Delete</button>`:""}</td></tr>`;
-  }).join("") : `<tr><td colspan="6"><div class="note">No development actions yet. ${canEdit?'Use "Add action" below to start building the plan with your mentor.':''}</div></td></tr>`;
+      <td class="mono" style="width:34px;color:var(--t3);text-align:center;vertical-align:top;padding-top:15px">${i+1}</td>
+      <td class="lacell">
+        <div style="font-weight:500;font-size:14px;line-height:1.45">${a.priority?`<span class="pill ${a.priority==="1"?"p-rust":a.priority==="2"?"p-amber":"p-grey"}" style="margin-right:6px">P${a.priority}</span>`:""}${a.title}</div>
+        ${a.outcome?`<div style="font-size:12px;color:var(--t3);margin-top:4px;line-height:1.5">${String(a.outcome).replace(/</g,"&lt;")}</div>`:""}
+        ${a.origin==="EVP"?`<div class="evptag">EVP${a.pillar?` · ${escH(pillarName(a.pillar))}`:""}</div>`:""}
+      </td>
+      <td class="lameta">
+        <div><span class="pill ${b.cls||'p-grey'}">${b.short||a.band}</span></div>
+        <div class="lawhen">${tl}</div>
+        <div>${statusTxt}</div>
+      </td>
+      <td class="actcell"><div class="lacts">${laThreadBtn(ACTOR, a)}${canEdit?`<button class="btn sm" onclick="editLA('${a.id}')">Edit</button><button class="btn sm" onclick="deleteLA('${a.id}')" title="Delete \u2014 moves to the archive">Delete</button>`:""}</div></td></tr>`;
+  }).join("") : `<tr><td colspan="4"><div class="note">No development actions yet. ${canEdit?'Use "Add action" below to start building the plan with your mentor.':''}</div></td></tr>`;
 
   return `<div class="card">
     <div style="margin-bottom:2px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
@@ -2476,7 +2513,7 @@ function learningPlanTable(){
         <button class="btn sm nowrap" onclick="showLog()"><span class="ti ti-history" style="font-size:13px"></span>Change log</button>
       </div>
     </div>
-    <table class="tbl"><thead><tr><th style="text-align:center;width:34px">#</th><th>Action</th><th style="width:150px">70:20:10 band</th><th style="width:74px">Timeline</th><th>Status update</th><th style="width:150px"></th></tr></thead>
+    <table class="tbl latbl"><thead><tr><th style="text-align:center;width:34px">#</th><th>Action</th><th style="width:172px">Band, timeline &amp; status</th><th style="width:96px"></th></tr></thead>
     <tbody>${rows}</tbody></table>
     ${canEdit?`<div class="hdr-actions" style="margin-top:14px">
       <button class="btn sm pri nowrap" onclick="addLA()"><span class="ti ti-plus" style="font-size:13px"></span>Add action</button>
@@ -2819,28 +2856,37 @@ function saveBrief(){
 
 function editMilestone(){
   const c=curPath(ACTOR); if(!c) return;
-  const eligible=[];
-  if(c.ladder[c.atIdx+1]) eligible.push({role:c.ladder[c.atIdx+1],kind:"Immediate next"});
-  if(c.ladder[c.atIdx+2]) eligible.push({role:c.ladder[c.atIdx+2],kind:"Skip level"});
-  const opts = eligible.length
-    ? eligible.map(e=>`<option value="${e.role.replace(/"/g,'&quot;')}" ${c.next===e.role?"selected":""}>${e.role} — ${e.kind}</option>`).join("")
-    : `<option>${c.next||"No higher rung available"}</option>`;
-  const noMatch = c.next && !eligible.some(e=>e.role===c.next);
+  const sug=[];
+  if(c.ladder[c.atIdx+1]) sug.push(c.ladder[c.atIdx+1]);
+  if(c.ladder[c.atIdx+2]) sug.push(c.ladder[c.atIdx+2]);
+  const esc2 = v => String(v||"").replace(/"/g,"&quot;");
   document.getElementById("modalBody").innerHTML=`
-    <h3>Edit next milestone</h3><div class="sub">${c.name} · only the immediate next or a skip-level rung.</div>
+    <h3>Edit next milestone</h3>
+    <div class="sub">${c.name} \u00b7 the role they're working towards</div>
     <label>Next role</label>
-    <select id="cmNext" style="width:100%;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line2);border-radius:8px">
-      ${noMatch?`<option value="${(c.next||"").replace(/"/g,'&quot;')}" selected>${c.next} — current selection</option>`:""}
-      ${opts}
-    </select>
-    <div class="note" style="margin-top:10px;font-size:12px">Targets are limited to one or two rungs above your current level (${c.ladder[c.atIdx]||"—"}).</div>
+    <input type="text" id="cmNext" value="${esc2(c.next)}" list="cmNextList"
+      placeholder="e.g. Senior Manager">
+    <datalist id="cmNextList">${sug.map(r=>`<option value="${esc2(r)}">`).join("")}</datalist>
+    ${sug.length?`<div class="note" style="margin-top:10px;font-size:12px">
+      On their ladder the next rungs are <b>${escH(sug.join("</b> and <b>"))}</b> \u2014 but you can
+      type anything, including a sideways move or a role that isn't on the ladder.</div>`:""}
     <div class="foot"><button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn pri" onclick="saveMilestone()">Save</button></div>`;
   openModal();
+  const el=document.getElementById("cmNext"); if(el) el.focus();
 }
 function saveMilestone(){
   const c=curPath(ACTOR); if(!c) return;
-  c.next=document.getElementById("cmNext").value||c.next;
+  const old = c.next || "";
+  const val = (document.getElementById("cmNext").value||"").trim();
+  if(!val){ toast("Give the next role a name."); return; }
+  c.next = val;
+  if(val !== old){
+    laLog(ACTOR, ACTOR, old?"edited":"created", "next-role",
+          (old?"Next role changed to ":"Next role set to ")+val);
+    saveToExcel(_careerTable(), _careerRowId(), careerRow(),
+      {changeType:"Updated", field:"NextRole", oldValue:old, newValue:val});
+  }
   closeModal();render();toast("Next milestone updated");
 }
 function editReadiness(){
@@ -3464,7 +3510,7 @@ function laLog(eid,by,act,target,note){
      change log survives refreshes. Plain comments are filed separately by the
      save hook, so skip those here to avoid duplicates. */
   if(act!=="comment" && typeof saveToExcel==="function"){
-    saveToExcel("Comments","",{ActionID:target||"", EmployeeID:eid, AuthorID:actor,
+    saveToExcel("Comments","",{ActionID:"log:"+(target||""), EmployeeID:eid, AuthorID:actor,
       AuthorRole:"log:"+act, CommentText:note||"", VisibleToMentee:"TRUE",
       VisibleToLeadership:"TRUE", CreatedOn:ts}, {changeType:"Comment"});
   }
@@ -3551,6 +3597,20 @@ function laForm(id, preset){
 function afterLaSave(){
   const back = _evpReturnTo;
   _evpReturnTo = null;
+
+  /* Saving inside someone else's record must land back on that record.
+     buildNav() runs first and resets TAB, because "learning" isn't in the
+     mentor's own nav - so a plain render() dropped you on My mentees with
+     ACTOR still pointing at the mentee, which then looked empty. */
+  if(!back && typeof _mentorReturn !== "undefined" && _mentorReturn
+     && typeof openMenteeLearning === "function"){
+    const eid = ACTOR;
+    const keep = _mentorReturn;      // openMenteeLearning would otherwise
+    _mentorReturn = null;            // capture the mentee as the return point
+    openMenteeLearning(eid);
+    _mentorReturn = keep;            // restore the mentor's own seat for Back
+    return;
+  }
   if(!back){ render(); return; }
 
   /* A mentor raising an action on a mentee's check-in has to go back through
@@ -3775,11 +3835,11 @@ function menteeList(hipotOnly){
       <td style="font-size:13px">${E(eid).desig}</td>
       <td style="font-size:13px">${cp?cp.next:'<span style="color:var(--t3)">—</span>'}</td>
       <td style="text-align:right;white-space:nowrap">
-        <button class="btn sm" onclick="openMenteeEvp('${eid}')"><span class="ti ti-clipboard-text" style="font-size:13px"></span>EVP check-in</button>
+        ${hipotOnly?"":`<button class="btn sm" onclick="openMenteeEvp('${eid}')"><span class="ti ti-clipboard-text" style="font-size:13px"></span>EVP check-in</button>`}
         <button class="btn sm pri" onclick="openMenteeLearning('${eid}')"><span class="ti ti-edit" style="font-size:13px"></span>Development plan</button>
       </td></tr>`;
   }).join("");
-  return `<div class="card"><h2>${hipotOnly?"HiPot mentees":"My mentees"}</h2>
+  return `<div class="card">
     <table class="tbl"><thead><tr><th>Mentee</th><th>Current role</th><th>Next milestone</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 /* mentor edits mentee readiness inline -> reflected to mentee + logged */
@@ -6207,10 +6267,14 @@ function applyReadPayload(d){
       const lp = DB.learningPlans[c.EmployeeID]; if(!lp) return;
       if(!visible(c.VisibleToMentee) && !IS_ADMIN && ROLE==="employee") return;
       const role = String(c.AuthorRole||"");
-      if(role.slice(0,4).toLowerCase()==="log:"){
+      const aid  = String(c.ActionID||"");
+      const isLog = role.slice(0,4).toLowerCase()==="log:" || aid.slice(0,4).toLowerCase()==="log:";
+      if(isLog){
         /* a persisted change-log entry — restore it with its original act */
         lp.changelog.push({ ts:c.CreatedOn||"", by:c.AuthorID,
-          act:role.slice(4)||"edited", target:c.ActionID||"\u2014", note:c.CommentText||"" });
+          act:role.slice(0,4).toLowerCase()==="log:" ? (role.slice(4)||"edited") : "edited",
+          target:(aid.slice(0,4).toLowerCase()==="log:" ? aid.slice(4) : aid) || "\u2014",
+          note:c.CommentText||"" });
       } else {
         lp.changelog.push({ d:c.CreatedOn||"", by:c.AuthorID,
           tt:(role||"Comment")+" \u00b7 "+(c.ActionID||""), tx:c.CommentText||"" });
@@ -6244,7 +6308,12 @@ function applyReadPayload(d){
       };
       DB.hipotThreads = {};
       let kept = 0;
-      cmts.map(c=>({
+      cmts.filter(c=>{
+          const role = String(pick(c,["authorrole","role"])||"").toLowerCase();
+          const aid  = String(pick(c,["actionid","targetid","id"])||"").toLowerCase();
+          return role.indexOf("log:")!==0 && aid.indexOf("log:")!==0;
+        })
+        .map(c=>({
           anchor: String(pick(c,["actionid","targetid","id"])||"").trim(),
           by:     String(pick(c,["authorid","author","createdby"])||""),
           at:     String(cellDate(pick(c,["createdon","created","date"]))||"").slice(0,16),
