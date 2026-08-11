@@ -55,12 +55,12 @@ body{font-family:'Poppins',system-ui,sans-serif;color:var(--text);font-size:14px
 .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
 /* Bebas Kai is the brand headline face; Bebas Neue is its freely hosted twin */
 .serif{font-family:'Bebas Neue','Bebas Kai',Impact,sans-serif;letter-spacing:.055em}
-.shell{display:flex;min-height:100vh;
-  background:linear-gradient(to right, var(--ink) 0 208px, transparent 208px)}
-.main{min-height:100vh}
+html,body{height:100%}
+.shell{display:flex;height:100vh;overflow:hidden}
+.main{min-height:0}
 
 /* sidebar */
-.side{width:208px;flex:0 0 208px;background:var(--ink);color:#DDE2EA;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.side{width:208px;flex:0 0 208px;background:var(--ink);color:#DDE2EA;display:flex;flex-direction:column;height:100%;overflow-y:auto}
 .brand{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.09)}
 .brand .mk{font-family:'Bebas Neue','Bebas Kai',sans-serif;font-size:21px;font-weight:400;letter-spacing:.075em;color:#fff;display:flex;align-items:center;gap:9px}
 .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--yellow)}
@@ -102,7 +102,8 @@ nav{padding:12px 10px;flex:1;overflow-y:auto}
 .sfoot{padding:12px 18px;border-top:1px solid rgba(255,255,255,.09);font-size:10.5px;color:#6B778A;line-height:1.5}
 
 /* main */
-main{flex:1;min-width:0;padding:clamp(14px,2.4vw,28px) clamp(14px,3vw,36px) 28px;max-width:1680px}
+main{flex:1;min-width:0;padding:0 clamp(14px,3vw,36px) 28px;max-width:1680px;
+  height:100%;overflow-y:auto;overflow-x:hidden}
 .lp-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,300px);gap:18px;align-items:start;
   padding-bottom:0}
 /* the sticky rail is often taller than the main column, which left a long
@@ -212,7 +213,7 @@ main{flex:1;min-width:0;padding:clamp(14px,2.4vw,28px) clamp(14px,3vw,36px) 28px
 .rep .rx{font-size:14px;color:var(--t3);flex:none}
 .phead{position:sticky;top:0;z-index:30;display:flex;align-items:flex-start;
   justify-content:space-between;gap:20px;flex-wrap:wrap;
-  margin:calc(clamp(14px,2.4vw,28px) * -1) calc(clamp(14px,3vw,36px) * -1) 22px;
+  margin:0 calc(clamp(14px,3vw,36px) * -1) 22px;
   padding:clamp(14px,2.4vw,28px) clamp(14px,3vw,36px) 14px;
   background:var(--paper);border-bottom:1px solid transparent;transition:border-color .15s,box-shadow .15s}
 .phead.stuck{border-bottom-color:var(--line);box-shadow:0 6px 16px -12px rgba(15,27,45,.4)}
@@ -813,7 +814,10 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
 .toast.on{opacity:1}
 
 @media(max-width:900px){
-  .shell{flex-direction:column;background:none}.side{width:100%;flex:none;height:auto}
+  html,body{height:auto}
+  .shell{flex-direction:column;height:auto;overflow:visible}
+  .side{width:100%;flex:none;height:auto}
+  main{height:auto;overflow:visible}
   body{background:var(--paper)}   /* sidebar sits on top on narrow screens */
   nav{display:flex;overflow-x:auto;gap:4px;padding:10px}.navlab,.sfoot{display:none}
   .tab{white-space:nowrap;margin-bottom:0}.tab .lk{display:none}
@@ -5110,7 +5114,8 @@ function openReportPage(eid, kind){
   host.innerHTML = `<div class="view on">${kind === "aisum" ? vAiSummary() : f360Body(eid)}</div>`;
   wrapTables(host);
   updateBackBtn();
-  if(window.scrollTo) try{ window.scrollTo(0,0); }catch(e){}
+  try{ const sc = document.querySelector("main"); if(sc) sc.scrollTop = 0;
+       else if(window.scrollTo) window.scrollTo(0,0); }catch(e){}
 }
 function open360(eid){ openReportPage(eid, "f360"); }
 function openAiSummary(eid){ openReportPage(eid, "aisum"); }
@@ -6705,8 +6710,10 @@ syncPill();
 (function(){
   const ph = document.querySelector(".phead");
   if(!ph) return;
-  const mark = () => ph.classList.toggle("stuck", window.scrollY > 4);
-  window.addEventListener("scroll", mark, {passive:true});
+  const scroller = document.querySelector("main") || window;
+  const top = () => scroller === window ? window.scrollY : scroller.scrollTop;
+  const mark = () => ph.classList.toggle("stuck", top() > 4);
+  scroller.addEventListener("scroll", mark, {passive:true});
   /* publish the header's real height so anything else that sticks can clear it
      rather than guessing - it changes with viewport width and wrapping */
   /* measured once at boot came back 0, because the login overlay is up and the
