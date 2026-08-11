@@ -1292,6 +1292,21 @@ const rdColor = r => {
   return "amber";
 };
 function menteesOf(mid){return DB.pairings.filter(p=>p.mentor===mid&&p.status==="Active");}
+/* Mentees split by pairing type: a HiPot mentor is often a different person
+   from the career mentor, and both need the whole plan. */
+function menteesOfKind(mid, hipot){
+  return menteesOf(mid).filter(p => (String(p.type||"") === "HiPot") === !!hipot);
+}
+/* Anyone with an active pairing to this person mentors them - career mentor,
+   HiPot mentor, or both. The plan's single `mentor` field only ever held one
+   of them, so the other was locked out of their own mentee's plan. */
+function isMentorOf(eid, who){
+  const me = who || (typeof CURRENT_EMP !== "undefined" && CURRENT_EMP) || ACTOR;
+  if(!me) return false;
+  if(DB.pairings.some(p => p.mentee===eid && p.mentor===me && p.status==="Active")) return true;
+  const lp = DB.learningPlans[eid];
+  return !!(lp && lp.mentor === me);
+}
 function pairingsOfMentee(eid){return DB.pairings.filter(p=>p.mentee===eid);}
 function targetsOf(eid){return DB.targets.filter(t=>t.emp===eid);}
 function reviewQueueFor(mid){
@@ -1372,6 +1387,7 @@ const NAVS={
   ],
   mentor:[
     ["mentees","My mentees","ti-users"],
+    ["hipotmentees","HiPot mentees","ti-rocket"],
     ["interactions","Interactions","ti-messages"]
   ],
   leader:[
@@ -1400,7 +1416,8 @@ const TITLES={
   evp:["EVP check-in","Your priorities, satisfaction and comments across the six pillars."],
   succ:["Succession Planning","Who succeeds your role — and whose successor you are."],
   queue:["Review queue","Progress updates from your mentees awaiting your approval."],
-  mentees:["My mentees","Everyone you mentor, across all pairing types."],
+  mentees:["My mentees","The people you mentor on their career path."],
+  hipotmentees:["HiPot mentees","The people you mentor on the FY27 high-potential cohort."],
   interactions:["Interactions","Session notes and the logged history per mentee."],
   overview:["Org overview","Top-down health of the talent you can see."],
   hipots:["HiPots","Every high-potential in scope and their live targets."],
@@ -1457,7 +1474,10 @@ function buildNav(){
   const nav=document.getElementById("nav");
   let h=`<div class="navlab">${ROLE==="hr"?"Administration":ROLE==="leader"?"Leadership view":ROLE==="mentor"?"Mentoring":"Your record"}</div>`;
   // Admin always sees all tabs; other roles only see sections HR left visible.
-  const visTabs=NAVS[ROLE].filter(([id])=>ROLE==="hr"||isVisible(id));
+  const visTabs=NAVS[ROLE]
+    .filter(([id])=>ROLE==="hr"||isVisible(id))
+    /* only show HiPot mentees to someone who actually has one */
+    .filter(([id])=>id!=="hipotmentees" || menteesOfKind(ACTOR,true).length>0);
   // if current TAB was hidden, fall back to first visible
   if(!visTabs.some(([id])=>id===TAB)) TAB=(visTabs[0]||NAVS[ROLE][0])[0];
   visTabs.forEach(([id,label,ic])=>{
@@ -1585,7 +1605,7 @@ function render(){
   const host=document.getElementById("viewHost");
   const fn={
     kpi:vKPI,career:vCareer,learning:vLearning,hipot:vHipot,succ:vSucc,
-    queue:vQueue,mentees:vMentees,interactions:vInteractions,
+    queue:vQueue,mentees:vMentees,hipotmentees:vHipotMentees,interactions:vInteractions,
     overview:vOverview,hipots:vHipots,succmap:vSuccMap,nextroles:vNextRoles,
     config:vConfig,access:vAccess,integrity:vIntegrity,sections:vSections,master:vMaster,
     compliance:vCompliance,plans:vPlans
@@ -1880,7 +1900,7 @@ function openEvpPage(){
 function canEditEvpAct(eid){
   if(!isEditable("evp.responses") && !isEditable("learning.actions")) return false;
   const lp = DB.learningPlans[eid];
-  const isTheirMentor = !!(lp && typeof CURRENT_EMP!=="undefined" && lp.mentor===CURRENT_EMP);
+  const isTheirMentor = isMentorOf(eid);
   return IS_ADMIN || isTheirMentor || eid===CURRENT_EMP;
 }
 
@@ -1965,7 +1985,7 @@ function evpBody(eid){
   const flags = evpConcerns(r);
   /* whoever may edit the plan may raise an action off a finding */
   const lp = DB.learningPlans[eid];
-  const isTheirMentor = !!(lp && typeof CURRENT_EMP!=="undefined" && lp.mentor===CURRENT_EMP);
+  const isTheirMentor = isMentorOf(eid);
   const canAct = isEditable("learning.actions") && (IS_ADMIN || isTheirMentor || eid===CURRENT_EMP);
   /* One card per pillar rather than table rows. The comment runs to a paragraph
      and each pillar carries its own commitments and button - a table column
@@ -2422,7 +2442,7 @@ function sweepArchived(lp){
 function learningPlanTable(){
   const lp=DB.learningPlans[ACTOR];
   sweepArchived(lp);
-  const menteesMentor = lp && (lp.mentor===ACTOR || (typeof CURRENT_EMP!=="undefined" && lp.mentor===CURRENT_EMP));
+  const menteesMentor = isMentorOf(ACTOR);
   const canEdit = (ROLE==="employee" || (ROLE==="mentor" && menteesMentor) || IS_ADMIN) && isEditable("learning.actions");
   const mentorName = lp ? nm(lp.mentor) : "—";
   const rows = (lp&&lp.actions.length) ? lp.actions.map((a,i)=>{
@@ -2768,7 +2788,7 @@ function canEditCareer(){
   if(ROLE==="employee") return DB.config.careerPathSelectable!==false;
   if(ROLE==="mentor"){
     const lp=DB.learningPlans[ACTOR];
-    return !!(lp && typeof CURRENT_EMP!=="undefined" && lp.mentor===CURRENT_EMP);
+    return isMentorOf(ACTOR);
   }
   return false;
 }
@@ -3697,7 +3717,7 @@ function restoreLA(id){
 function showArchiveLA(){
   const lp=DB.learningPlans[ACTOR];
   sweepArchived(lp);
-  const menteesMentor = lp && (lp.mentor===ACTOR || (typeof CURRENT_EMP!=="undefined" && lp.mentor===CURRENT_EMP));
+  const menteesMentor = isMentorOf(ACTOR);
   const canEdit = (ROLE==="employee" || (ROLE==="mentor" && menteesMentor) || IS_ADMIN) && isEditable("learning.actions");
   const arch=(lp&&lp.archive)?lp.archive.slice().reverse():[];
   const rows=arch.length?arch.map(a=>{
@@ -3733,9 +3753,14 @@ function vQueue(){
   return `${banner}<div class="card"><h2>Pending approvals <span class="badge-n">${q.length}</span></h2><p class="hint">Approve to lock a submission, or return it with comments.</p>
     <table class="tbl"><thead><tr><th>Mentee</th><th>Target</th><th>Proposed</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
-function vMentees(){
-  const ms=menteesOf(ACTOR);
-  if(!ms.length) return `<div class="empty"><div class="ei ti ti-users"></div><h3>No mentees</h3><p>You aren't currently paired with anyone.</p></div>`;
+function vMentees(){ return menteeList(false); }
+function vHipotMentees(){ return menteeList(true); }
+
+function menteeList(hipotOnly){
+  const ms=menteesOfKind(ACTOR, hipotOnly);
+  if(!ms.length) return hipotOnly
+    ? `<div class="empty"><div class="ei ti ti-rocket"></div><h3>No HiPot mentees</h3><p>You aren't paired with anyone on the FY27 high-potential cohort.</p></div>`
+    : `<div class="empty"><div class="ei ti ti-users"></div><h3>No mentees</h3><p>You aren't currently paired with anyone.</p></div>`;
   const seen={};const uniq=ms.map(p=>p.mentee).filter(id=>!seen[id]&&(seen[id]=1));
   const rdOpts=(cur)=>READINESS_OPTIONS.map(o=>`<option ${cur===o?"selected":""}>${o}</option>`).join("");
   const rows=uniq.map(eid=>{
@@ -3754,7 +3779,7 @@ function vMentees(){
         <button class="btn sm pri" onclick="openMenteeLearning('${eid}')"><span class="ti ti-edit" style="font-size:13px"></span>Development plan</button>
       </td></tr>`;
   }).join("");
-  return `<div class="card"><h2>My mentees</h2>
+  return `<div class="card"><h2>${hipotOnly?"HiPot mentees":"My mentees"}</h2>
     <table class="tbl"><thead><tr><th>Mentee</th><th>Current role</th><th>Next milestone</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 /* mentor edits mentee readiness inline -> reflected to mentee + logged */
@@ -5123,7 +5148,7 @@ function openAiSummary(eid){ openReportPage(eid, "aisum"); }
 /* whoever may edit the plan may raise an action off a finding */
 function canRaiseAction(eid){
   const lp = DB.learningPlans[eid];
-  const isTheirMentor = !!(lp && typeof CURRENT_EMP!=="undefined" && lp.mentor===CURRENT_EMP);
+  const isTheirMentor = isMentorOf(eid);
   return isEditable("learning.actions") && (IS_ADMIN || isTheirMentor || eid===CURRENT_EMP);
 }
 function raiseAction(eid, label, src){
