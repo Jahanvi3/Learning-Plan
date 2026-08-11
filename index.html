@@ -55,7 +55,8 @@ body{font-family:'Poppins',system-ui,sans-serif;color:var(--text);font-size:14px
 .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
 /* Bebas Kai is the brand headline face; Bebas Neue is its freely hosted twin */
 .serif{font-family:'Bebas Neue','Bebas Kai',Impact,sans-serif;letter-spacing:.055em}
-.shell{display:flex;min-height:100vh}
+.shell{display:flex;min-height:100vh;
+  background:linear-gradient(to right, var(--ink) 0 208px, transparent 208px)}
 .main{min-height:100vh}
 
 /* sidebar */
@@ -812,7 +813,7 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
 .toast.on{opacity:1}
 
 @media(max-width:900px){
-  .shell{flex-direction:column}.side{width:100%;flex:none;height:auto}
+  .shell{flex-direction:column;background:none}.side{width:100%;flex:none;height:auto}
   body{background:var(--paper)}   /* sidebar sits on top on narrow screens */
   nav{display:flex;overflow-x:auto;gap:4px;padding:10px}.navlab,.sfoot{display:none}
   .tab{white-space:nowrap;margin-bottom:0}.tab .lk{display:none}
