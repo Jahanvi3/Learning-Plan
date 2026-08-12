@@ -3149,11 +3149,15 @@ function rollUpStatus(rows){
 }
 
 /* mentee and mentor both set status on an initiative, and nothing else */
+/* The pair own progress: the mentee moves their own initiatives, and so does
+   whoever mentors them - career mentor or HiPot mentor. The plan itself stays
+   read-only for both. */
 function canSetTargetStatus(eid){
   if(!isEditable("hipot.targets")) return false;
   if(IS_ADMIN) return true;
-  if(ACTOR===eid && ACTOR===CURRENT_EMP) return true;
-  return ROLE==="mentor" || (typeof _mentorReturn!=="undefined" && !!_mentorReturn);
+  const me = (typeof CURRENT_EMP !== "undefined" && CURRENT_EMP) || ACTOR;
+  if(me === eid) return true;                     // it's their own plan
+  return isMentorOf(eid, me);                     // any active pairing
 }
 function setTargetStatus(eid, tid, value){
   if(!canSetTargetStatus(eid)){ toast("You can't change this."); return; }
@@ -3204,8 +3208,9 @@ function canComment(eid){
   if(me === eid) return true;                       // it's about them
   const lp = DB.learningPlans[eid];
   if(lp && lp.mentor === me) return true;           // they mentor them
-  const paired = (DB.pairings||[]).some(p=>p.mentee===eid && p.mentor===me && p.status==="Active");
-  return paired || ROLE === "mentor" || (typeof _mentorReturn !== "undefined" && !!_mentorReturn);
+  /* Same rule as status: your own plan, or someone you actually mentor.
+     The old trailing ROLE check let any mentor comment on anyone. */
+  return isMentorOf(eid, me);
 }
 /* Comments live in a popup off the OKR header rather than stacked under every
    card - on a plan with five OKRs the inline threads pushed the initiatives,
@@ -3546,6 +3551,15 @@ function closeModal(){
 
 /* ============ LEARNING PLAN ACTIONS (70:20:10) ============ */
 /* Read a column whatever case or spacing the sheet uses. */
+/* Normalise an ID from a sheet: strip whitespace including non-breaking
+   spaces, and any zero-width characters Excel picks up from pasted text. */
+function nid(v){
+  return String(v == null ? "" : v)
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/\u00A0/g, " ")
+    .trim();
+}
+
 function col(row, names){
   for(const n of names){
     for(const k in row){
@@ -3874,12 +3888,32 @@ function vHipotMentees(){ return menteeList(true); }
 
 function menteeList(hipotOnly){
   const ms=menteesOfKind(ACTOR, hipotOnly);
+  if(!ms.length){
+    /* Diagnose rather than shrug: the usual causes are pairings not loaded,
+       an ID that doesn't match the employee master, or every pairing being the
+       other type. Say which. */
+    const all = (DB.pairings||[]).filter(p=>p.mentor===ACTOR);
+    const active = all.filter(p=>p.status==="Active");
+    const other = active.length && !ms.length;
+    if(!DB.pairings || !DB.pairings.length) return `<div class="empty">
+      <div class="ei ti ti-users"></div><h3>Pairings haven't loaded</h3>
+      <p>The Pairings table came back empty from Excel. Shift-click the sync pill to see the row counts.</p></div>`;
+    if(all.length && !active.length) return `<div class="empty">
+      <div class="ei ti ti-users"></div><h3>No active pairings</h3>
+      <p>${nm(ACTOR)} has ${all.length} pairing${all.length===1?"":"s"}, but none marked <b>Active</b> in the Pairings sheet.</p></div>`;
+    if(other) return `<div class="empty">
+      <div class="ei ti ${hipotOnly?"ti-rocket":"ti-users"}"></div>
+      <h3>Nothing in this list</h3>
+      <p>${nm(ACTOR)} has ${active.length} active pairing${active.length===1?"":"s"}, but ${active.length===1?"it's":"they're"}
+        all <b>${hipotOnly?"Career":"HiPot"}</b> \u2014 look under
+        <b>${hipotOnly?"My mentees":"My HiPot mentees"}</b>.</p></div>`;
+  }
   if(!ms.length) return hipotOnly
     ? `<div class="empty"><div class="ei ti ti-rocket"></div><h3>No HiPot mentees</h3><p>You aren't paired with anyone on the FY27 high-potential cohort.</p></div>`
     : `<div class="empty"><div class="ei ti ti-users"></div><h3>No mentees</h3><p>You aren't currently paired with anyone.</p></div>`;
   const seen={};const uniq=ms.map(p=>p.mentee).filter(id=>!seen[id]&&(seen[id]=1));
   const rdOpts=(cur)=>READINESS_OPTIONS.map(o=>`<option ${cur===o?"selected":""}>${o}</option>`).join("");
-  const rows=uniq.map(eid=>{
+  const rows=uniq.filter(eid=>DB.employees[eid]).map(eid=>{
     const cp=curPath(eid);
     const readSel=cp?`<select onchange="mentorSetReadiness('${eid}',this.value)" style="font-family:inherit;font-size:12.5px;padding:5px 8px;border:1px solid var(--line2);border-radius:7px">${rdOpts(cp.readiness)}</select>`:'<span style="color:var(--t3)">—</span>';
     const isHip = !!(E(eid).hipot || hipotPlanFor(eid));
@@ -3887,7 +3921,7 @@ function menteeList(hipotOnly){
       <td><div class="who"><span class="av ${isHip?"avhip":""}">${initials(nm(eid))}</span><div>
         <div style="font-weight:500;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${nm(eid)}
           ${isHip?`<span class="hipbadge" title="On the FY27 high-potential cohort">HI-POT</span>`:""}</div>
-        <div style="font-size:11.5px;color:var(--t3)">${E(eid).fn}</div></div></div></td>
+        <div style="font-size:11.5px;color:var(--t3)">${escH(E(eid).fn||E(eid).sub||E(eid).desig||"")}</div></div></div></td>
       <td style="font-size:13px">${E(eid).desig}</td>
       <td style="font-size:13px">${cp?cp.next:'<span style="color:var(--t3)">—</span>'}</td>
       <td style="text-align:right;white-space:nowrap">
@@ -3895,7 +3929,21 @@ function menteeList(hipotOnly){
         <button class="btn sm pri" onclick="openMenteeLearning('${eid}')"><span class="ti ti-edit" style="font-size:13px"></span>Development plan</button>
       </td></tr>`;
   }).join("");
-  return `<div class="card">
+  const _diag = (function(){
+    if(!IS_ADMIN) return "";
+    const all = (DB.pairings||[]).filter(p=>p.mentor===ACTOR && p.status==="Active");
+    const kind = all.filter(p=>(String(p.type||"")==="HiPot")===!!hipotOnly);
+    const missing = kind.filter(p=>!DB.employees[p.mentee]);
+    const otherKind = all.length - kind.length;
+    if(!missing.length && !otherKind) return "";
+    return `<div class="note" style="border-color:var(--amber);margin-bottom:12px">
+      <b>${all.length} active pairing${all.length===1?"":"s"}</b> for ${escH(nm(ACTOR))}.
+      ${otherKind?`${otherKind} ${hipotOnly?"are Career":"are HiPot"} and show on the other tab. `:""}
+      ${missing.length?`<b>${missing.length} can't be shown</b> \u2014 the MenteeID isn't on the employee master, or that person is Inactive:
+        <ul style="margin:7px 0 0 18px">${missing.map(p=>`<li><span class="mono">${escH(p.mentee)}</span></li>`).join("")}</ul>`:""}
+    </div>`;
+  })();
+  return _diag + `<div class="card">
     <table class="tbl"><thead><tr><th>Mentee</th><th>Current role</th><th>Next milestone</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 /* mentor edits mentee readiness inline -> reflected to mentee + logged */
@@ -5934,6 +5982,16 @@ let CURRENT_EMP=null;
 let IS_ADMIN=false;
 
 /* which roles is this person tagged for, from the data */
+/* Rebuildable hat bar. Called at login and again after every sync. */
+let _landRole = "employee";
+function refreshHats(id){
+  const who = id || CURRENT_EMP;
+  if(!who || !DB.employees[who]) return;
+  const hats = Array.from(new Set([_landRole].concat(availableRoles(who))))
+                    .filter(r => r !== "leader" && r !== "hr");
+  if(typeof buildHatSwitcher === "function") buildHatSwitcher(hats);
+}
+
 function availableRoles(empId){
   if(empId==="E-0001") return ["hr"];
   const roles=["employee"];                                  // everyone is an employee/mentee
@@ -6107,7 +6165,14 @@ function syncPill(){
   const dot = c => '<span style="width:7px;height:7px;border-radius:50%;background:'+c+';display:inline-block"></span>';
   if(SYNC_STATE==="off")          el.innerHTML = dot("#A7A9AC") + "Demo data — not connected to Excel";
   else if(SYNC_STATE==="loading") el.innerHTML = dot("#D18700") + "Syncing with Excel\u2026";
-  else if(SYNC_STATE==="stale")   el.innerHTML = dot("#D18700") + "Showing last saved \u00b7 refreshing\u2026";
+  else if(SYNC_STATE==="stale"){
+    const snap = (typeof _SNAP_MEM!=="undefined" && _SNAP_MEM) ? _SNAP_MEM : null;
+    const age = snap ? Math.round((Date.now()-snap.at)/60000) : null;
+    el.innerHTML = dot("#D18700") + "Showing data from "
+      + (age===null ? "your last visit" : age < 1 ? "a moment ago"
+         : age < 60 ? age + " min ago" : Math.round(age/60) + "h ago")
+      + " \u00b7 refreshing\u2026";
+  }
   else if(SYNC_STATE==="empty")   el.innerHTML = dot("#D18700") + "Connected, but Excel returned no rows";
   else if(SYNC_STATE==="error")   el.innerHTML = dot("#8A5A00") + "Sync failed — click to retry";
   else el.innerHTML = dot("#006837") + "Live \u00b7 synced " + LAST_SYNC + " \u00b7 click to refresh";
@@ -6122,7 +6187,7 @@ let _READ_CACHE = null, _READ_AT = 0;
    that blocks it just falls back to the old behaviour of waiting. Anything
    older than a day is thrown away rather than shown.
    --------------------------------------------------------------------------- */
-const SNAP_KEY = "tp.read.snapshot";
+const SNAP_KEY = "tp.read.snapshot.v2";
 const SNAP_MAX_AGE = 7*24*60*60*1000;
 /* localStorage, not sessionStorage: sessionStorage is wiped when the tab
    closes, so every fresh visit paid the full round-trip again. This keeps the
@@ -6249,6 +6314,10 @@ async function loadFromExcel(manual){
       return;
     }
     if(typeof dirSync==="function") dirSync("done");
+    /* pairings may only have arrived now - a mentor's hat depends on them */
+    if(typeof refreshHats==="function" && typeof CURRENT_EMP!=="undefined" && CURRENT_EMP){
+      try{ refreshHats(CURRENT_EMP); }catch(e){ console.error("[hats] refresh failed", e); }
+    }
     if(manual) toast("Refreshed from Excel");
     return;
   }catch(err){
@@ -6266,13 +6335,14 @@ function applyReadPayload(d){
       const seeded = DB.employees;            // keep seeded email/role as a fallback
       DB.employees = {};
       d.employees.filter(e=>e.EmployeeID && String(e.RecordStatus||"Active")!=="Inactive").forEach(e=>{
-        DB.employees[e.EmployeeID] = {
-          id:e.EmployeeID, name:e.FullName,
+        const _id = nid(e.EmployeeID);
+        DB.employees[_id] = {
+          id:_id, name:e.FullName,
           email:e.WorkEmail || (seeded[e.EmployeeID]||{}).email || "",
           fn:e.Function, sub:e.SubFunction, desig:e.Designation,
-          lvl:Number(e.Level)||0, mgr:e.ManagerID||null,
+          lvl:Number(e.Level)||0, mgr:nid(e.ManagerID)||null,
           hipot:truthy(e.HiPot), hcat:e.HiPotCategory||"", loc:e.Location||"\u2014",
-          mentorId:e.MentorID||"",
+          mentorId:nid(e.MentorID)||"",
           f360Url:e.Feedback360URL || (seeded[e.EmployeeID]||{}).f360Url || "",
           insightUrl:e.ExpertInsightsURL || (seeded[e.EmployeeID]||{}).insightUrl || "",
           evpUrl:e.EVPURL || (seeded[e.EmployeeID]||{}).evpUrl || "",
@@ -6285,7 +6355,7 @@ function applyReadPayload(d){
     /* -- pairings (drives mentor access) -------------------------------- */
     if(Array.isArray(d.pairings)){
       DB.pairings = d.pairings.filter(p=>p.PairingID).map(p=>({
-        id:p.PairingID, mentee:p.MenteeID, mentor:p.MentorID,
+        id:nid(p.PairingID), mentee:nid(p.MenteeID), mentor:nid(p.MentorID),
         type:p.PairingType||"Career", status:p.Status||"Active"
       }));
     }
@@ -6323,7 +6393,7 @@ function applyReadPayload(d){
       DB.learningPlans[id] = { mentor: mentorOf[id] || null, actions:[], changelog:[], archive:[] };
     });
     (d.actions||[]).filter(a=>a.ActionID).forEach(a=>{
-      const lp = DB.learningPlans[a.EmployeeID]; if(!lp) return;
+      const lp = DB.learningPlans[nid(a.EmployeeID)]; if(!lp) return;
       if(!visible(a.VisibleToMentee) && !IS_ADMIN && ROLE==="employee") return;   // row-level visibility
       const o = {
         id:a.ActionID, title:a.ActionTitle, band:String(a.Band),
@@ -6372,7 +6442,7 @@ function applyReadPayload(d){
     /* -- hipot targets ---------------------------------------------------- */
     if(Array.isArray(d.targets)){
       DB.targets = d.targets.filter(t=>t.TargetID).map(t=>({
-        id:t.TargetID, emp:t.EmployeeID, initiative:t.Initiative||"", focus:t.FocusArea||"",
+        id:nid(t.TargetID), emp:nid(t.EmployeeID), initiative:t.Initiative||"", focus:t.FocusArea||"",
         okr:t.Target||"", target:t.Target||"", timeline:t.Timeline||"", comments:t.Comments||"",
         status:t.Status||"Not Started", selfFb:t.SelfFeedback||"", mentorFb:t.MentorFeedback||""
       }));
@@ -6867,9 +6937,12 @@ function completeLogin(id, emp){
     + '<br><span style="opacity:.65">' + id + " \u00b7 " + sheetRole + "</span>";
 
   const land = ROLE_FROM_SHEET[sheetRole] || "employee";
-  const hats = Array.from(new Set([land].concat(availableRoles(id))))
-                    .filter(r => r !== "leader" && r !== "hr");
-  buildHatSwitcher(hats);
+  /* Remember the landing role so the hats can be rebuilt later. Sign-in now
+     opens before the sync finishes, so at this moment pairings may not be
+     loaded - and a mentor whose pairings arrive a second later would never
+     get a Mentor hat. refreshHats() runs again once the data lands. */
+  _landRole = land;
+  refreshHats(id);
   if(!IS_ADMIN) ACTOR = id;
   setRole(land);
   updateBackBtn();
