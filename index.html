@@ -1354,8 +1354,13 @@ function bar(pc,c){return `<div class="rail"><i class="f-${c}" style="width:${Ma
 /* permission helpers — role-aware. Employee uses DB.perms; mentor context uses DB.permsMentor.
    "Mentor context" = a mentor editing a mentee's learning page (ROLE==='mentor' with a mentee's learning plan open). */
 function permReg(){
-  // when a mentor is viewing/editing a mentee's page, ACTOR is the mentee and ROLE is 'mentor'
-  return (typeof ROLE!=="undefined" && ROLE==="mentor") ? DB.permsMentor : DB.perms;
+  // When a mentor is viewing a mentee's page, ACTOR is the mentee and ROLE is
+  // 'mentor' - use the mentor rules. But on their OWN record they're a mentee
+  // like anyone else, so the mentor rules must not apply to themselves.
+  const viewingSelf = (typeof CURRENT_EMP!=="undefined" && CURRENT_EMP)
+    ? (CURRENT_EMP === ACTOR) : false;
+  const asMentor = (typeof ROLE!=="undefined" && ROLE==="mentor") && !viewingSelf;
+  return asMentor ? DB.permsMentor : DB.perms;
 }
 /* ---------------------------------------------------------------------------
    Modules parked for now. Hidden from EVERY login, HR Admin included, and not
@@ -3153,7 +3158,6 @@ function rollUpStatus(rows){
    whoever mentors them - career mentor or HiPot mentor. The plan itself stays
    read-only for both. */
 function canSetTargetStatus(eid){
-  if(!isEditable("hipot.targets")) return false;
   if(IS_ADMIN) return true;
   const me = (typeof CURRENT_EMP !== "undefined" && CURRENT_EMP) || ACTOR;
   if(me === eid) return true;                     // it's their own plan
@@ -3348,6 +3352,11 @@ function hipotBody(eid){
           ${mine?`<button class="btn sm pri" onclick="targetForm('${eid}',null)"><span class="ti ti-plus" style="font-size:13px"></span>Add initiative</button>`:""}
         </div>
       </h2>
+      ${(!canSet && ts.length) ? `<div class="note" style="border-color:var(--amber);margin-bottom:12px">
+        <b>Status is read-only for you here.</b>
+        You're signed in as <b>${escH(nm(CURRENT_EMP)||CURRENT_EMP||"\u2014")}</b> and there's no
+        active pairing to <b>${escH(nm(eid))}</b> in the Pairings sheet.
+      </div>` : ""}
       <p class="hint">${mine
         ? "Admin view \u2014 you can edit every field."
         : canSet
@@ -6560,9 +6569,9 @@ function applyReadPayload(d){
 
     /* -- 1. visibility + editor toggles --------------------------------- */
     (d.permissions||[]).filter(p=>p.PermissionKey).forEach(p=>{
-      DB.perms[p.PermissionKey] = { vis:truthy(p.MenteeVisible), edit:truthy(p.MenteeEdit) };
+      DB.perms[p.PermissionKey] = { vis:visible(p.MenteeVisible), edit:visible(p.MenteeEdit) };
       if(String(p.MentorVisible).toLowerCase() !== "n/a")
-        DB.permsMentor[p.PermissionKey] = { vis:truthy(p.MentorVisible), edit:truthy(p.MentorEdit) };
+        DB.permsMentor[p.PermissionKey] = { vis:visible(p.MentorVisible), edit:visible(p.MentorEdit) };
     });
     (d.config||[]).filter(c=>c.SettingKey).forEach(c=>{
       const v = String(c.Value).trim().toUpperCase();
