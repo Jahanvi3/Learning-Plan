@@ -391,6 +391,10 @@ table.tbl tr.clk{cursor:pointer}table.tbl tr.clk:hover{background:#FAFBF9}
 .clab{display:flex;align-items:center;gap:5px;font-size:10px;letter-spacing:.04em;
   color:#8B96A6;margin-top:2px}
 .clab .ti{font-size:12px}
+.rowlink{cursor:pointer;transition:background .12s}
+.rowlink:hover{background:var(--violetbg)}
+.rowlink:hover b{color:var(--violet)}
+.rowlink:focus-visible{outline:2px solid var(--violet);outline-offset:-2px}
 .hipbadge{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.11em;
   background:var(--violet);color:#fff;border-radius:4px;padding:3px 7px;white-space:nowrap}
 .hiprow > td{background:var(--violetbg)}
@@ -5682,7 +5686,8 @@ function vPlans(){
 /* ============ HR: DEVELOPMENT ACTION COMPLIANCE ============ */
 /* Compliant = the person has at least one live development action, any band.
    Archived/deleted rows don't count — only what's on the active plan. */
-let COMP_Q = "", COMP_FN = "all", COMP_ST = "all";
+let COMP_Q = "", COMP_FN = "all", COMP_ST = "all", COMP_SRC = "all";
+let MENT_Q = "", MENT_ST = "all";
 
 const escH = s => String(s==null?"":s).replace(/[&<>"]/g,
   c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
@@ -5706,7 +5711,7 @@ function complianceRows(){
     return {
       id:e.id, name:e.name||e.id, fn:e.fn||"\u2014", sub:e.sub||"",
       desig:e.desig||"", lvl:e.lvl||0,
-      mentor: mentorId ? nm(mentorId) : "",
+      mentor: mentorId ? nm(mentorId) : "", mentorId: mentorId,
       n:acts.length, by:by, src:src, last:last, ok:acts.length>0
     };
   });
@@ -5718,16 +5723,63 @@ function complianceFiltered(){
     if(COMP_FN !== "all" && r.fn !== COMP_FN) return false;
     if(COMP_ST === "yes" && !r.ok) return false;
     if(COMP_ST === "no"  &&  r.ok) return false;
+    /* source filter: keep only people who have at least one action from there */
+    if(COMP_SRC !== "all" && !(r.src && r.src[COMP_SRC] > 0)) return false;
     if(q && (r.name+" "+r.id+" "+r.desig+" "+r.mentor).toLowerCase().indexOf(q) === -1) return false;
     return true;
   }).sort((a,b)=> a.n - b.n || a.name.localeCompare(b.name));   // gaps first
 }
 
+/* Mentor compliance table + its filter, kept apart so typing re-renders only
+   the rows rather than the whole Compliance page. */
+let MENTOR_ROWS = [];
+function mentorFiltered(){
+  const q = MENT_Q.trim().toLowerCase();
+  return MENTOR_ROWS.filter(m=>{
+    if(MENT_ST === "gaps" && m.pc === 100) return false;
+    if(MENT_ST === "full" && m.pc !== 100) return false;
+    if(MENT_ST === "none" && m.ok !== 0)   return false;
+    if(q && (m.name + " " + m.mid).toLowerCase().indexOf(q) === -1) return false;
+    return true;
+  });
+}
+function mentorTableHTML(){
+  const rows = mentorFiltered();
+  if(!rows.length) return '<div class="note">No mentors match that filter.</div>';
+  return `<table class="tbl"><thead><tr>
+      <th>Mentor</th>
+      <th style="width:80px;text-align:center">Mentees</th>
+      <th style="width:80px;text-align:center">Covered</th>
+      <th style="width:150px">Coverage</th>
+      <th style="width:90px;text-align:center">Actions</th>
+    </tr></thead><tbody>${rows.map(m=>`<tr>
+      <td>${escH(m.name)}</td>
+      <td class="mono" style="text-align:center">${m.n}</td>
+      <td class="mono" style="text-align:center;color:${m.pc===100?'var(--jade)':m.pc>=50?'var(--amber)':'var(--rust)'}">${m.ok}</td>
+      <td>${bar(m.pc, m.pc===100?"jade":m.pc>=50?"amber":"rust")}</td>
+      <td class="mono" style="text-align:center;color:var(--t2)">${m.acts}</td>
+    </tr>`).join("")}</tbody></table>`;
+}
+function mentApply(){
+  const q = document.getElementById("mentQ"), st = document.getElementById("mentSt");
+  if(q)  MENT_Q  = q.value;
+  if(st) MENT_ST = st.value;
+  const host = document.getElementById("mentBody");
+  if(host){ host.innerHTML = mentorTableHTML(); wrapTables(host); }
+  const c = document.getElementById("mentCount");
+  if(c) c.textContent = mentorFiltered().length + " of " + MENTOR_ROWS.length + " shown.";
+}
+function mentReset(){ MENT_Q=""; MENT_ST="all"; render(); }
+
 function compTableHTML(){
   const rows = complianceFiltered();
   if(!rows.length) return '<div class="note">Nobody matches those filters.</div>';
-  const body = rows.map(r=>`<tr>
-      <td><b>${escH(r.name)}</b><div style="font-size:11px;color:var(--t3)">${escH(r.id)}${r.desig?" \u00b7 "+escH(r.desig):""}</div></td>
+  const body = rows.map(r=>`<tr class="rowlink" tabindex="0"
+      title="Open ${escH(r.name)}'s development plan"
+      onclick="openMenteeLearning('${String(r.id).replace(/'/g,"\\'")}')"
+      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMenteeLearning('${String(r.id).replace(/'/g,"\\'")}');}">
+      <td><b>${escH(r.name)}</b>
+        <div style="font-size:11px;color:var(--t3)">${escH(r.id)}${r.desig?" \u00b7 "+escH(r.desig):""}</div></td>
       <td>${escH(r.fn)}${r.sub && r.sub!==r.fn?`<div style="font-size:11px;color:var(--t3)">${escH(r.sub)}</div>`:""}</td>
       <td>${r.mentor?escH(r.mentor):'<span style="color:var(--t3)">\u2014</span>'}</td>
       <td class="mono" style="text-align:center;font-weight:600;color:${r.n?"var(--text)":"var(--rust)"}">${r.n}</td>
@@ -5751,16 +5803,18 @@ function compApply(){
   const q  = document.getElementById("compQ");
   const fn = document.getElementById("compFn");
   const st = document.getElementById("compSt");
+  const sr = document.getElementById("compSrc");
   if(q)  COMP_Q  = q.value;
   if(fn) COMP_FN = fn.value;
   if(st) COMP_ST = st.value;
+  if(sr) COMP_SRC = sr.value;
   const host = document.getElementById("compBody");
   if(host){ host.innerHTML = compTableHTML(); wrapTables(host); }
   const c = document.getElementById("compCount");
   if(c) c.textContent = complianceFiltered().length + " of " + complianceRows().length + " shown";
 }
 function compReset(){
-  COMP_Q=""; COMP_FN="all"; COMP_ST="all"; render();
+  COMP_Q=""; COMP_FN="all"; COMP_ST="all"; COMP_SRC="all"; render();
 }
 
 function exportCompliance(){
@@ -5821,60 +5875,6 @@ function vCompliance(){
         <div style="font-size:11px;color:var(--t3);margin-top:6px">${avg} avg per active plan</div></div>
     </div>
 
-    <div class="card"><h2>Compliance by function</h2>
-      <p class="hint">Share of each function that has logged at least one development action.</p>
-      ${fnRows||'<div class="note">No employee data loaded yet.</div>'}
-      <div class="note" style="margin-top:12px">Across everyone: <b>${distTotals["70"]}</b> actions in the 70 band,
-        <b>${distTotals["20"]}</b> in the 20, <b>${distTotals["10"]}</b> in the 10.</div>
-    </div>
-
-    ${(function(){
-      const miss = unmatchedPlans();
-      const total = Object.keys(DB.hipotPlans||{}).length;
-      if(!total) return "";
-      return `<div class="card"${miss.length?' style="border-color:var(--amber)"':""}>
-        <h2>FY27 Hi-Pot plans</h2>
-        <p class="hint">${total - miss.length} of ${total} plans are matched to someone on the employee master
-          and show on their HiPot page. Matching is by name.</p>
-        ${miss.length?`<div class="note" style="border-color:var(--amber)">
-          <b>${miss.length} plan${miss.length===1?"":"s"} match nobody</b>, so ${miss.length===1?"it is":"they are"} invisible in the portal.
-          Either the person isn't on the employee master, or their name is spelled differently there \u2014
-          open <b>Hi-Pot plans</b> to link them by hand.
-          <ul style="margin:9px 0 0 18px">${miss.slice(0,6).map(m=>`<li>${escH(m.name)}</li>`).join("")}</ul>
-          ${miss.length>6?`<div style="margin-top:7px;color:var(--t2)">\u2026and ${miss.length-6} more.</div>`:""}
-        </div>`:'<div class="note">Every plan is matched.</div>'}
-      </div>`;
-    })()}
-
-    ${(function(){
-      /* Where the plans are coming from. An action raised off the EVP check-in
-         or the 360 summary carries its origin; anything typed straight into the
-         learning plan counts as General. */
-      const tally = { EVP:0, "360":0, General:0 };
-      let total = 0;
-      Object.keys(DB.learningPlans||{}).forEach(eid=>{
-        ((DB.learningPlans[eid]||{}).actions||[]).forEach(a=>{
-          const o = tally[a.origin] !== undefined ? a.origin : "General";
-          tally[o]++; total++;
-        });
-      });
-      const pct = n => total ? Math.round(n/total*100) : 0;
-      const seg = (lab,n,tone) => `<div class="srcrow">
-          <span class="l">${lab}</span>
-          <div class="tr"><i style="width:${pct(n)}%;background:var(--${tone})"></i></div>
-          <span class="v mono">${n}</span><span class="p mono">${pct(n)}%</span>
-        </div>`;
-      return `<div class="card">
-        <h2>Where the actions came from</h2>
-        <p class="hint">${total} development action${total===1?"":"s"} in total.
-          ${tally["360"]} raised from a 360 summary, ${tally.EVP} from an EVP check-in,
-          and ${tally.General} added straight to a learning plan.</p>
-        ${seg("From a 360 summary", tally["360"], "violet")}
-        ${seg("From an EVP check-in", tally.EVP, "jade")}
-        ${seg("General", tally.General, "yellow-d")}
-      </div>`;
-    })()}
-
     <div class="card">
       <h2>Action count per person</h2>
       <p class="hint">Sorted with the gaps at the top. <span id="compCount">${total} of ${total} shown</span>.</p>
@@ -5882,6 +5882,12 @@ function vCompliance(){
         <input id="compQ" class="inp" style="flex:1;min-width:170px" placeholder="Search name, ID, mentor\u2026"
                value="${escH(COMP_Q)}" oninput="compApply()">
         <select id="compFn" class="inp" style="width:auto" onchange="compApply()">${fnOpts}</select>
+        <select id="compSrc" class="inp" style="width:auto" onchange="compApply()">
+          <option value="all"     ${COMP_SRC==="all"    ?"selected":""}>Any source</option>
+          <option value="360"     ${COMP_SRC==="360"    ?"selected":""}>From a 360 summary</option>
+          <option value="EVP"     ${COMP_SRC==="EVP"    ?"selected":""}>From an EVP check-in</option>
+          <option value="General" ${COMP_SRC==="General"?"selected":""}>General</option>
+        </select>
         <select id="compSt" class="inp" style="width:auto" onchange="compApply()">
           <option value="all" ${COMP_ST==="all"?"selected":""}>Everyone</option>
           <option value="no"  ${COMP_ST==="no" ?"selected":""}>No actions only</option>
@@ -5891,7 +5897,55 @@ function vCompliance(){
         <button class="btn pri" onclick="exportCompliance()"><span class="ti ti-download"></span> Export CSV</button>
       </div>
       <div id="compBody">${compTableHTML()}</div>
-    </div>`;
+    </div>
+
+
+    ${(function(){
+      /* Mentor compliance. Per-person compliance shows who's missing a plan;
+         this shows whose mentor isn't chasing it - the actionable version for HR,
+         because you follow up with the mentor, not the mentee. */
+      const byMentor = {};
+      complianceRows().forEach(r=>{
+        const mid = r.mentorId || "";
+        if(!mid) return;                       // unmentored people aren't a mentor's failure
+        const b = byMentor[mid] || (byMentor[mid] = {n:0, ok:0, acts:0});
+        b.n++; if(r.ok) b.ok++; b.acts += r.n;
+      });
+      MENTOR_ROWS = Object.keys(byMentor).map(mid=>{
+        const b = byMentor[mid];
+        return {mid:mid, name:nm(mid)||mid, n:b.n, ok:b.ok, acts:b.acts,
+                pc: b.n ? Math.round(b.ok/b.n*100) : 0};
+      }).sort((x,y)=> x.pc - y.pc || y.n - x.n);   // worst coverage first
+      if(!MENTOR_ROWS.length) return "";
+      const fully = MENTOR_ROWS.filter(m=>m.pc===100).length;
+      return `<div class="card">
+        <h2>Mentor compliance</h2>
+        <p class="hint">How many of each mentor's mentees have at least one development action.
+          ${fully} of ${MENTOR_ROWS.length} mentor${MENTOR_ROWS.length===1?"":"s"} ${fully===1?"has":"have"}
+          everyone covered. Gaps first. <span id="mentCount"></span></p>
+        <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:13px">
+          <input id="mentQ" class="inp" style="flex:1;min-width:170px" placeholder="Search mentor\u2026"
+                 value="${escH(MENT_Q)}" oninput="mentApply()">
+          <select id="mentSt" class="inp" style="width:auto" onchange="mentApply()">
+            <option value="all"  ${MENT_ST==="all" ?"selected":""}>All mentors</option>
+            <option value="gaps" ${MENT_ST==="gaps"?"selected":""}>Has gaps</option>
+            <option value="full" ${MENT_ST==="full"?"selected":""}>Fully covered</option>
+            <option value="none" ${MENT_ST==="none"?"selected":""}>Nobody covered</option>
+          </select>
+          <button class="btn" onclick="mentReset()">Reset</button>
+        </div>
+        <div id="mentBody">${mentorTableHTML()}</div>
+      </div>`;
+    })()}
+
+
+    <div class="card"><h2>Compliance by function</h2>
+      <p class="hint">Share of each function that has logged at least one development action.</p>
+      ${fnRows||'<div class="note">No employee data loaded yet.</div>'}
+      <div class="note" style="margin-top:12px">Across everyone: <b>${distTotals["70"]}</b> actions in the 70 band,
+        <b>${distTotals["20"]}</b> in the 20, <b>${distTotals["10"]}</b> in the 10.</div>
+    </div>
+</div>`;
 }
 
 /* ============ HR: SECTION VISIBILITY ============ */
