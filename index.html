@@ -3057,6 +3057,21 @@ function setPlanLink(planKey, eid){
   render();
 }
 
+/* Surnames have to agree too. "Ankush Panwar" and "Ankush Bansal" share a
+   first name and score 0.75 overall, which was enough to link two different
+   people. A first name alone is not an identity. */
+function surnameMatches(a, b){
+  const last = s => {
+    const parts = String(s||"").trim().split(/\s+/).map(x=>x.replace(/[^a-z]/gi,"")).filter(Boolean);
+    return parts.length > 1 ? parts[parts.length-1].toLowerCase() : "";
+  };
+  const x = last(a), y = last(b);
+  if(!x || !y) return true;                 // single-word name: nothing to compare
+  if(x === y) return true;
+  if(x.length < 4 || y.length < 4) return false;   // initials must match exactly
+  return (1 - _lev(x,y)/Math.max(x.length,y.length)) >= 0.75;
+}
+
 function matchPlanKey(name, eid){
   /* a manual link wins over anything the matcher would work out */
   if(eid){
@@ -3076,8 +3091,10 @@ function matchPlanKey(name, eid){
   const scored = Object.keys(DB.hipotPlans).map(k=>{
     const pn = (DB.hipotPlans[k]||{}).n || k;
     const pf = docKey(_firstName(pn));
-    return { k:k, sim: 1 - _lev(key,k)/Math.max(key.length,k.length), ok:firstNameMatches(first,pf) };
-  }).filter(x=>x.ok && !takenBy[x.k])   // different first name, or already pinned elsewhere
+    const x = { k:k, sim: 1 - _lev(key,k)/Math.max(key.length,k.length), ok:firstNameMatches(first,pf) };
+    x.surOk = surnameMatches(name, pn);
+    return x;
+  }).filter(x=>x.ok && x.surOk && !takenBy[x.k])   // names must agree on both parts
     .sort((a,b)=>b.sim-a.sim);
   const best = scored[0], second = scored[1];
   if(!best || best.sim < PLAN_MIN_SIM) return null;
